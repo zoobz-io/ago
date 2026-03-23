@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // Await waits for a correlated event on a signal.

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
 )
 
 // errNoRows is the error string returned by database/sql for no rows.

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/ago"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	"github.com/zoobz-io/capitan"
 )
 
 // MockStore wraps MemoryStore with tracking and failure injection.

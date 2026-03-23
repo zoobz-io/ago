@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
 )
 
 func TestAwait_Basic(t *testing.T) {

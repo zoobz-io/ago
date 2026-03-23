@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
 )
 
 // TestTiming_ResponseAfterTimeout tests what happens when a response arrives

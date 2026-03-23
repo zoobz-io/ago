@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/herald"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/herald"
 )
 
 // mockProvider implements herald.Provider for testing.

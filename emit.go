@@ -3,8 +3,8 @@ package ago
 import (
 	"context"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // Emit emits a capitan signal with fields derived from the flow.

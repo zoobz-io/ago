@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
 )
 
 // TestHandlerFailure_ExecuteHandlerPanics tests behavior when an execute signal handler panics.

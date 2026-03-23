@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/herald"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/herald"
+	"github.com/zoobz-io/pipz"
 )
 
 // DeadLetter routes failed messages to a dead letter queue.

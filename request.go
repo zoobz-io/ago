@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // ErrTimeout indicates a request timed out waiting for response.

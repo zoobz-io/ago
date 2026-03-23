@@ -39,3 +39,9 @@ Thumbs.db
 
 # GoReleaser output directory
 .dist/
+
+# Profiling
+*.pprof
+
+# Claude
+.claude/

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
 )
 
 func TestCompensate_Basic(t *testing.T) {

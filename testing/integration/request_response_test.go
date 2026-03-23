@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/ago"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	"github.com/zoobz-io/capitan"
 )
 
 // Query represents a test query for request/response tests.

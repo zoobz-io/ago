@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
 )
 
 func TestEnrich(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
 )
 
 // TestStoreFailure_GetSagaFails tests behavior when GetSaga fails during step execution.

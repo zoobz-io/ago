@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
 )
 
 // Store provides persistence for coordination and saga state.

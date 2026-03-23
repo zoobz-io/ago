@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // Order represents a test order for saga tests.

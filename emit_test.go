@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
 )
 
 func TestEmit_Basic(t *testing.T) {

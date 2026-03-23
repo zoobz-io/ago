@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
 )
 
 // Flow wraps a typed payload with correlation context and accumulated state.

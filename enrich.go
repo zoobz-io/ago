@@ -3,8 +3,8 @@ package ago
 import (
 	"context"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // Enrich fetches external data and adds it to the flow's fields.

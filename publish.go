@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/zoobzio/herald"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/herald"
+	"github.com/zoobz-io/pipz"
 )
 
 // Publish publishes the flow's payload to a message broker via herald.
