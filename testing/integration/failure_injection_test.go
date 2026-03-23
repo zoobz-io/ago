@@ -9,6 +9,7 @@ import (
 	"github.com/zoobz-io/ago"
 	agotesting "github.com/zoobz-io/ago/testing"
 	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // TestStoreFailure_GetSagaFails tests behavior when GetSaga fails during step execution.
@@ -31,7 +32,7 @@ func TestStoreFailure_GetSagaFails(t *testing.T) {
 		atomic.AddInt64(&execCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "fail-get"}, execSignal)
@@ -75,7 +76,7 @@ func TestStoreFailure_WithSagaFails(t *testing.T) {
 		atomic.AddInt64(&execCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "fail-withsaga"}, execSignal)
@@ -122,7 +123,7 @@ func TestStoreFailure_MarkStepFails(t *testing.T) {
 		atomic.AddInt64(&execCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "fail-mark"}, execSignal)
@@ -172,7 +173,7 @@ func TestStoreFailure_RetryAfterMarkFailure(t *testing.T) {
 		atomic.AddInt64(&execCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "retry-mark"}, execSignal)
@@ -225,9 +226,9 @@ func TestStoreFailure_CompensationWithSagaFails(t *testing.T) {
 	compSignal := capitan.NewSignal("comp", "Compensate")
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "comp-fail-withsaga"}, execSignal)
 	flow.CorrelationID = "comp-fail-withsaga-test"
@@ -270,9 +271,9 @@ func TestStoreFailure_CompensationMarkStepFails(t *testing.T) {
 		atomic.AddInt64(&compCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "comp-fail-mark"}, execSignal)
 	flow.CorrelationID = "comp-fail-mark-test"
@@ -314,9 +315,9 @@ func TestStoreFailure_CompensationRetryAfterMarkFails(t *testing.T) {
 		atomic.AddInt64(&compCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "comp-retry-mark"}, execSignal)
 	flow.CorrelationID = "comp-retry-mark-test"
@@ -377,8 +378,8 @@ func TestStoreFailure_MultiStepPartialFailure(t *testing.T) {
 		atomic.AddInt64(v.(*int64), 1)
 	})
 
-	s1 := ago.NewSagaStep[Order]("step1", store, orderKey, step1Exec, step1Comp).WithCapitan(c)
-	s2 := ago.NewSagaStep[Order]("step2", store, orderKey, step2Exec, step2Comp).WithCapitan(c)
+	s1 := ago.NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Exec, step1Comp).WithCapitan(c)
+	s2 := ago.NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Exec, step2Comp).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "partial-fail"}, step1Exec)
 	flow.CorrelationID = "partial-failure-test"
@@ -437,7 +438,7 @@ func TestStoreFailure_RecoveryWithFailures(t *testing.T) {
 	// Track SagaFailed signals
 	agotesting.HookTracker(c, tracker, ago.SagaFailed)
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	// Create incomplete saga
@@ -479,7 +480,7 @@ func TestStoreFailure_TransientFailureRecovery(t *testing.T) {
 		atomic.AddInt64(&execCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "transient"}, execSignal)

@@ -11,18 +11,18 @@ import (
 
 // Compensate runs the compensation stack in reverse for a saga.
 type Compensate[T any] struct {
-	name    pipz.Name
-	store   Store
-	key     capitan.GenericKey[T]
-	capitan *capitan.Capitan
+	identity pipz.Identity
+	store    Store
+	key      capitan.GenericKey[T]
+	capitan  *capitan.Capitan
 }
 
 // NewCompensate creates a compensation primitive.
-func NewCompensate[T any](name pipz.Name, store Store, key capitan.GenericKey[T]) *Compensate[T] {
+func NewCompensate[T any](identity pipz.Identity, store Store, key capitan.GenericKey[T]) *Compensate[T] {
 	return &Compensate[T]{
-		name:  name,
-		store: store,
-		key:   key,
+		identity: identity,
+		store:    store,
+		key:      key,
 	}
 }
 
@@ -42,7 +42,7 @@ func (c *Compensate[T]) WithCapitan(cpt *capitan.Capitan) *Compensate[T] {
 // This design allows signal emission and external idempotency tracking between state transitions.
 // The initial WithSaga ensures only one caller proceeds; others see "compensating" and return early.
 func (c *Compensate[T]) Build() pipz.Chainable[*Flow[T]] {
-	return pipz.Apply(c.name, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
+	return pipz.Apply(c.identity, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
 		emitFn := capitan.Emit
 		if c.capitan != nil {
 			emitFn = c.capitan.Emit
@@ -155,9 +155,14 @@ func (c *Compensate[T]) Build() pipz.Chainable[*Flow[T]] {
 	})
 }
 
-// Name returns the processor name.
-func (c *Compensate[T]) Name() pipz.Name {
-	return c.name
+// Identity returns the processor identity.
+func (c *Compensate[T]) Identity() pipz.Identity {
+	return c.identity
+}
+
+// Schema returns the processor schema.
+func (c *Compensate[T]) Schema() pipz.Node {
+	return pipz.Node{Identity: c.identity, Type: "compensate"}
 }
 
 // Process implements Chainable.

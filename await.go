@@ -10,20 +10,20 @@ import (
 
 // Await waits for a correlated event on a signal.
 type Await[T, V any] struct {
-	name    pipz.Name
-	capitan *capitan.Capitan
-	signal  capitan.Signal
-	key     capitan.GenericKey[V]
-	timeout time.Duration
+	identity pipz.Identity
+	capitan  *capitan.Capitan
+	signal   capitan.Signal
+	key      capitan.GenericKey[V]
+	timeout  time.Duration
 }
 
 // NewAwait creates an await primitive.
-func NewAwait[T, V any](name pipz.Name, signal capitan.Signal, key capitan.GenericKey[V]) *Await[T, V] {
+func NewAwait[T, V any](identity pipz.Identity, signal capitan.Signal, key capitan.GenericKey[V]) *Await[T, V] {
 	return &Await[T, V]{
-		name:    name,
-		signal:  signal,
-		key:     key,
-		timeout: 30 * time.Second,
+		identity: identity,
+		signal:   signal,
+		key:      key,
+		timeout:  30 * time.Second,
 	}
 }
 
@@ -41,7 +41,7 @@ func (a *Await[T, V]) Timeout(d time.Duration) *Await[T, V] {
 
 // Build creates the chainable processor.
 func (a *Await[T, V]) Build() pipz.Chainable[*Flow[T]] {
-	return pipz.Apply(a.name, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
+	return pipz.Apply(a.identity, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
 		// Create result channel
 		resultCh := make(chan V, 1)
 		hookFn := func(_ context.Context, e *capitan.Event) {
@@ -81,9 +81,14 @@ func (a *Await[T, V]) Build() pipz.Chainable[*Flow[T]] {
 	})
 }
 
-// Name returns the processor name.
-func (a *Await[T, V]) Name() pipz.Name {
-	return a.name
+// Identity returns the processor identity.
+func (a *Await[T, V]) Identity() pipz.Identity {
+	return a.identity
+}
+
+// Schema returns the processor schema.
+func (a *Await[T, V]) Schema() pipz.Node {
+	return pipz.Node{Identity: a.identity, Type: "await"}
 }
 
 // Process implements Chainable.

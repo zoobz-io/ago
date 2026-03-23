@@ -11,7 +11,7 @@ import (
 
 // SagaStep executes a saga step with compensation registration.
 type SagaStep[T any] struct {
-	name       pipz.Name
+	identity   pipz.Identity
 	store      Store
 	capitan    *capitan.Capitan
 	execute    capitan.Signal
@@ -23,14 +23,14 @@ type SagaStep[T any] struct {
 // NewSagaStep creates a saga step. Store is required for saga state
 // persistence and idempotency tracking.
 func NewSagaStep[T any](
-	name pipz.Name,
+	identity pipz.Identity,
 	store Store,
 	key capitan.GenericKey[T],
 	execute capitan.Signal,
 	compensate capitan.Signal,
 ) *SagaStep[T] {
 	return &SagaStep[T]{
-		name:       name,
+		identity:   identity,
 		store:      store,
 		key:        key,
 		execute:    execute,
@@ -54,8 +54,8 @@ func (s *SagaStep[T]) WithTimeout(d time.Duration) *SagaStep[T] {
 
 // Build creates the chainable processor.
 func (s *SagaStep[T]) Build() pipz.Chainable[*Flow[T]] {
-	return pipz.Apply(s.name, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
-		stepName := string(s.name)
+	return pipz.Apply(s.identity, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
+		stepName := s.identity.Name()
 
 		// Serialize payload for compensation (done outside WithSaga to avoid
 		// holding lock during serialization)
@@ -151,9 +151,14 @@ func (s *SagaStep[T]) Build() pipz.Chainable[*Flow[T]] {
 	})
 }
 
-// Name returns the processor name.
-func (s *SagaStep[T]) Name() pipz.Name {
-	return s.name
+// Identity returns the processor identity.
+func (s *SagaStep[T]) Identity() pipz.Identity {
+	return s.identity
+}
+
+// Schema returns the processor schema.
+func (s *SagaStep[T]) Schema() pipz.Node {
+	return pipz.Node{Identity: s.identity, Type: "saga-step"}
 }
 
 // Process implements Chainable by delegating to Build().

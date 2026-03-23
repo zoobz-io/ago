@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestRecoverSagas_CompensatesRunningWithTimeout(t *testing.T) {
@@ -30,7 +31,7 @@ func TestRecoverSagas_CompensatesRunningWithTimeout(t *testing.T) {
 	})
 
 	// Create saga step with timeout (not expired, but will be recovered anyway)
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c).
 		WithTimeout(1 * time.Hour)
 

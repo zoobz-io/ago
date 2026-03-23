@@ -12,7 +12,7 @@ import (
 
 // DeadLetter routes failed messages to a dead letter queue.
 type DeadLetter[T any] struct {
-	name     pipz.Name
+	identity pipz.Identity
 	capitan  *capitan.Capitan
 	signal   capitan.Signal
 	key      capitan.GenericKey[T]
@@ -20,11 +20,11 @@ type DeadLetter[T any] struct {
 }
 
 // NewDeadLetter creates a dead letter primitive.
-func NewDeadLetter[T any](name pipz.Name, key capitan.GenericKey[T]) *DeadLetter[T] {
+func NewDeadLetter[T any](identity pipz.Identity, key capitan.GenericKey[T]) *DeadLetter[T] {
 	return &DeadLetter[T]{
-		name:   name,
-		signal: DeadLetterRouted,
-		key:    key,
+		identity: identity,
+		signal:   DeadLetterRouted,
+		key:      key,
 	}
 }
 
@@ -48,7 +48,7 @@ func (d *DeadLetter[T]) WithProvider(provider herald.Provider) *DeadLetter[T] {
 
 // Build creates the chainable processor.
 func (d *DeadLetter[T]) Build() pipz.Chainable[*Flow[T]] {
-	return pipz.Apply(d.name, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
+	return pipz.Apply(d.identity, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
 		// Emit dead letter signal
 		emitFn := capitan.Emit
 		if d.capitan != nil {
@@ -91,9 +91,14 @@ func (d *DeadLetter[T]) Build() pipz.Chainable[*Flow[T]] {
 	})
 }
 
-// Name returns the processor name.
-func (d *DeadLetter[T]) Name() pipz.Name {
-	return d.name
+// Identity returns the processor identity.
+func (d *DeadLetter[T]) Identity() pipz.Identity {
+	return d.identity
+}
+
+// Schema returns the processor schema.
+func (d *DeadLetter[T]) Schema() pipz.Node {
+	return pipz.Node{Identity: d.identity, Type: "dead-letter"}
 }
 
 // Process implements Chainable.

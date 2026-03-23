@@ -200,7 +200,7 @@ pipeline := ago.Sequence("order-pipeline",
 
     // Parallel execution
     ago.Concurrent("parallel-notify",
-        func(original *ago.Flow[Order], results map[pipz.Name]*ago.Flow[Order], errors map[pipz.Name]error) *ago.Flow[Order] {
+        func(original *ago.Flow[Order], results map[pipz.Identity]*ago.Flow[Order], errors map[pipz.Identity]error) *ago.Flow[Order] {
             return original
         },
         emailNotify,

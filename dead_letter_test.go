@@ -9,6 +9,7 @@ import (
 
 	"github.com/zoobz-io/capitan"
 	"github.com/zoobz-io/herald"
+	"github.com/zoobz-io/pipz"
 )
 
 // dlqProvider implements herald.Provider for dead letter testing.
@@ -35,6 +36,10 @@ func (d *dlqProvider) Publish(_ context.Context, data []byte, metadata herald.Me
 }
 
 func (*dlqProvider) Subscribe(_ context.Context) <-chan herald.Result[herald.Message] {
+	return nil
+}
+
+func (*dlqProvider) Ping(_ context.Context) error {
 	return nil
 }
 
@@ -73,7 +78,7 @@ func TestDeadLetter_Basic(t *testing.T) {
 		mu.Unlock()
 	})
 
-	dl := NewDeadLetter[Order]("dead-letter", orderKey).WithCapitan(c)
+	dl := NewDeadLetter[Order](pipz.NewIdentity("dead-letter", ""), orderKey).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-123", Total: 99.99}, DeadLetterRouted)
 	flow.CorrelationID = "corr-dead-123"
@@ -115,7 +120,7 @@ func TestDeadLetter_WithErrors(t *testing.T) {
 		mu.Unlock()
 	})
 
-	dl := NewDeadLetter[Order]("dead-letter", orderKey).WithCapitan(c)
+	dl := NewDeadLetter[Order](pipz.NewIdentity("dead-letter", ""), orderKey).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-123"}, DeadLetterRouted)
 	flow.Errors = []error{
@@ -146,7 +151,7 @@ func TestDeadLetter_WithProvider(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 	provider := &dlqProvider{}
 
-	dl := NewDeadLetter[Order]("dead-letter", orderKey).
+	dl := NewDeadLetter[Order](pipz.NewIdentity("dead-letter", ""), orderKey).
 		WithCapitan(c).
 		WithProvider(provider)
 
@@ -196,7 +201,7 @@ func TestDeadLetter_ProviderError(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 	provider := &dlqProvider{failNext: true}
 
-	dl := NewDeadLetter[Order]("dead-letter", orderKey).
+	dl := NewDeadLetter[Order](pipz.NewIdentity("dead-letter", ""), orderKey).
 		WithCapitan(c).
 		WithProvider(provider)
 
@@ -225,7 +230,7 @@ func TestDeadLetter_WithCustomSignal(t *testing.T) {
 		mu.Unlock()
 	})
 
-	dl := NewDeadLetter[Order]("dead-letter", orderKey).
+	dl := NewDeadLetter[Order](pipz.NewIdentity("dead-letter", ""), orderKey).
 		WithCapitan(c).
 		WithSignal(customSignal)
 
@@ -249,17 +254,17 @@ func TestDeadLetter_WithCustomSignal(t *testing.T) {
 func TestDeadLetter_Name(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	dl := NewDeadLetter[Order]("my-dead-letter", orderKey)
+	dl := NewDeadLetter[Order](pipz.NewIdentity("my-dead-letter", ""), orderKey)
 
-	if dl.Name() != "my-dead-letter" {
-		t.Errorf("expected name 'my-dead-letter', got %q", dl.Name())
+	if dl.Identity().Name() != "my-dead-letter" {
+		t.Errorf("expected name 'my-dead-letter', got %q", dl.Identity().Name())
 	}
 }
 
 func TestDeadLetter_Close(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	dl := NewDeadLetter[Order]("my-dead-letter", orderKey)
+	dl := NewDeadLetter[Order](pipz.NewIdentity("my-dead-letter", ""), orderKey)
 
 	if err := dl.Close(); err != nil {
 		t.Errorf("expected nil error from Close, got %v", err)
@@ -269,7 +274,7 @@ func TestDeadLetter_Close(t *testing.T) {
 func TestDeadLetter_Build(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	dl := NewDeadLetter[Order]("my-dead-letter", orderKey)
+	dl := NewDeadLetter[Order](pipz.NewIdentity("my-dead-letter", ""), orderKey)
 	built := dl.Build()
 
 	if built == nil {

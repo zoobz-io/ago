@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestEnrich(t *testing.T) {
@@ -13,7 +14,7 @@ func TestEnrich(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	userKey := capitan.NewKey[string]("user", "User name")
 
-	enrich := Enrich[Order, string]("fetch-user", userKey, func(_ context.Context, o Order) (string, error) {
+	enrich := Enrich[Order, string](pipz.NewIdentity("fetch-user", ""), userKey, func(_ context.Context, o Order) (string, error) {
 		return "user-" + o.ID, nil
 	})
 
@@ -40,7 +41,7 @@ func TestEnrich_WithError(t *testing.T) {
 	userKey := capitan.NewKey[string]("user", "User name")
 	expectedErr := errors.New("fetch failed")
 
-	enrich := Enrich[Order, string]("fetch-user", userKey, func(_ context.Context, _ Order) (string, error) {
+	enrich := Enrich[Order, string](pipz.NewIdentity("fetch-user", ""), userKey, func(_ context.Context, _ Order) (string, error) {
 		return "", expectedErr
 	})
 
@@ -57,7 +58,7 @@ func TestEnrichOptional(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	userKey := capitan.NewKey[string]("user", "User name")
 
-	enrich := EnrichOptional[Order, string]("fetch-user", userKey, func(_ context.Context, o Order) (string, error) {
+	enrich := EnrichOptional[Order, string](pipz.NewIdentity("fetch-user", ""), userKey, func(_ context.Context, o Order) (string, error) {
 		return "user-" + o.ID, nil
 	})
 
@@ -83,7 +84,7 @@ func TestEnrichOptional_WithError(t *testing.T) {
 	userKey := capitan.NewKey[string]("user", "User name")
 	enrichErr := errors.New("enrichment failed")
 
-	enrich := EnrichOptional[Order, string]("fetch-user", userKey, func(_ context.Context, _ Order) (string, error) {
+	enrich := EnrichOptional[Order, string](pipz.NewIdentity("fetch-user", ""), userKey, func(_ context.Context, _ Order) (string, error) {
 		return "", enrichErr
 	})
 
@@ -120,7 +121,7 @@ func TestEnrich_ComplexType(t *testing.T) {
 	}
 	userInfoKey := capitan.NewKey[UserInfo]("user_info", "User information")
 
-	enrich := Enrich[Order, UserInfo]("fetch-user-info", userInfoKey, func(_ context.Context, o Order) (UserInfo, error) {
+	enrich := Enrich[Order, UserInfo](pipz.NewIdentity("fetch-user-info", ""), userInfoKey, func(_ context.Context, o Order) (UserInfo, error) {
 		return UserInfo{
 			Name:  "User for " + o.ID,
 			Email: o.ID + "@example.com",

@@ -9,8 +9,8 @@ import (
 )
 
 // Publish publishes the flow's payload to a message broker via herald.
-func Publish[T any](name pipz.Name, provider herald.Provider) pipz.Chainable[*Flow[T]] {
-	return pipz.Apply(name, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
+func Publish[T any](identity pipz.Identity, provider herald.Provider) pipz.Chainable[*Flow[T]] {
+	return pipz.Apply(identity, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
 		data, err := json.Marshal(f.Payload)
 		if err != nil {
 			return f, err

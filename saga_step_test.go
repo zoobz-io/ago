@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestSagaStep_ExecuteAndCompensate(t *testing.T) {
@@ -31,7 +32,7 @@ func TestSagaStep_ExecuteAndCompensate(t *testing.T) {
 	})
 
 	// Create saga step
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c)
 
 	// Create flow with correlation
@@ -98,7 +99,7 @@ func TestSagaStep_Idempotency(t *testing.T) {
 		mu.Unlock()
 	})
 
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-1", Total: 100.0}, reserveInventory)
@@ -158,7 +159,7 @@ func TestSagaStep_IdempotencyKey(t *testing.T) {
 		mu.Unlock()
 	})
 
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-1", Total: 100.0}, reserveInventory)
@@ -188,7 +189,7 @@ func TestSagaStep_WithTimeout(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
 	// Create saga step with timeout
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c).
 		WithTimeout(5 * time.Minute)
 
@@ -219,10 +220,10 @@ func TestSagaStep_Name(t *testing.T) {
 	execSignal := capitan.NewSignal("exec", "Execute")
 	compSignal := capitan.NewSignal("comp", "Compensate")
 
-	step := NewSagaStep[Order]("my-step", store, orderKey, execSignal, compSignal)
+	step := NewSagaStep[Order](pipz.NewIdentity("my-step", ""), store, orderKey, execSignal, compSignal)
 
-	if step.Name() != "my-step" {
-		t.Errorf("expected name 'my-step', got %q", step.Name())
+	if step.Identity().Name() != "my-step" {
+		t.Errorf("expected name 'my-step', got %q", step.Identity().Name())
 	}
 }
 
@@ -232,7 +233,7 @@ func TestSagaStep_Close(t *testing.T) {
 	execSignal := capitan.NewSignal("exec", "Execute")
 	compSignal := capitan.NewSignal("comp", "Compensate")
 
-	step := NewSagaStep[Order]("my-step", store, orderKey, execSignal, compSignal)
+	step := NewSagaStep[Order](pipz.NewIdentity("my-step", ""), store, orderKey, execSignal, compSignal)
 
 	if err := step.Close(); err != nil {
 		t.Errorf("expected nil error from Close, got %v", err)
@@ -265,7 +266,7 @@ func TestSagaStep_SkipsWhenCompensating(t *testing.T) {
 		emitCount++
 	})
 
-	step := NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).WithCapitan(c)
+	step := NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order"}, execSignal)
 	flow.CorrelationID = "compensating-saga"
