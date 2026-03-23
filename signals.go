@@ -1,6 +1,6 @@
 package ago
 
-import "github.com/zoobzio/capitan"
+import "github.com/zoobz-io/capitan"
 
 // Flow lifecycle signals.
 var (

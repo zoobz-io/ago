@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestAwait_Basic(t *testing.T) {
@@ -18,7 +19,7 @@ func TestAwait_Basic(t *testing.T) {
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
 	// Set up await
-	await := NewAwait[Order, string]("await-response", responseSignal, responseKey).
+	await := NewAwait[Order, string](pipz.NewIdentity("await-response", ""), responseSignal, responseKey).
 		WithCapitan(c).
 		Timeout(100 * time.Millisecond)
 
@@ -58,7 +59,7 @@ func TestAwait_TimeoutExpired(t *testing.T) {
 	responseSignal := capitan.NewSignal("order.response", "Order response")
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
-	await := NewAwait[Order, string]("await-response", responseSignal, responseKey).
+	await := NewAwait[Order, string](pipz.NewIdentity("await-response", ""), responseSignal, responseKey).
 		WithCapitan(c).
 		Timeout(10 * time.Millisecond)
 
@@ -81,7 +82,7 @@ func TestAwait_WrongCorrelationID(t *testing.T) {
 	responseSignal := capitan.NewSignal("order.response", "Order response")
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
-	await := NewAwait[Order, string]("await-response", responseSignal, responseKey).
+	await := NewAwait[Order, string](pipz.NewIdentity("await-response", ""), responseSignal, responseKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 
@@ -109,10 +110,10 @@ func TestAwait_Name(t *testing.T) {
 	responseSignal := capitan.NewSignal("order.response", "Order response")
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
-	await := NewAwait[Order, string]("my-await", responseSignal, responseKey)
+	await := NewAwait[Order, string](pipz.NewIdentity("my-await", ""), responseSignal, responseKey)
 
-	if await.Name() != "my-await" {
-		t.Errorf("expected name 'my-await', got %q", await.Name())
+	if await.Identity().Name() != "my-await" {
+		t.Errorf("expected name 'my-await', got %q", await.Identity().Name())
 	}
 }
 
@@ -120,7 +121,7 @@ func TestAwait_Close(t *testing.T) {
 	responseSignal := capitan.NewSignal("order.response", "Order response")
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
-	await := NewAwait[Order, string]("my-await", responseSignal, responseKey)
+	await := NewAwait[Order, string](pipz.NewIdentity("my-await", ""), responseSignal, responseKey)
 
 	if err := await.Close(); err != nil {
 		t.Errorf("expected nil error from Close, got %v", err)
@@ -131,7 +132,7 @@ func TestAwait_DefaultTimeout(t *testing.T) {
 	responseSignal := capitan.NewSignal("order.response", "Order response")
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
-	await := NewAwait[Order, string]("my-await", responseSignal, responseKey)
+	await := NewAwait[Order, string](pipz.NewIdentity("my-await", ""), responseSignal, responseKey)
 
 	// Default timeout should be 30 seconds
 	if await.timeout != 30*time.Second {
@@ -143,7 +144,7 @@ func TestAwait_Build(t *testing.T) {
 	responseSignal := capitan.NewSignal("order.response", "Order response")
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
-	await := NewAwait[Order, string]("my-await", responseSignal, responseKey)
+	await := NewAwait[Order, string](pipz.NewIdentity("my-await", ""), responseSignal, responseKey)
 	built := await.Build()
 
 	if built == nil {
@@ -158,7 +159,7 @@ func TestAwait_ContextCancellation(t *testing.T) {
 	responseSignal := capitan.NewSignal("order.response", "Order response")
 	responseKey := capitan.NewKey[string]("response", "Response value")
 
-	await := NewAwait[Order, string]("await-response", responseSignal, responseKey).
+	await := NewAwait[Order, string](pipz.NewIdentity("await-response", ""), responseSignal, responseKey).
 		WithCapitan(c).
 		Timeout(5 * time.Second)
 

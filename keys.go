@@ -1,6 +1,6 @@
 package ago
 
-import "github.com/zoobzio/capitan"
+import "github.com/zoobz-io/capitan"
 
 // Common keys for correlation and causation in distributed flows.
 var (

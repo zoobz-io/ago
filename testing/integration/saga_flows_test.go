@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // Order represents a test order for saga tests.
@@ -53,15 +53,15 @@ func TestSagaFlow_SuccessfulExecution(t *testing.T) {
 	)
 
 	// Build saga steps
-	step1 := ago.NewSagaStep[Order]("reserve-inventory", store, orderKey, reserveInventory, releaseInventory).
+	step1 := ago.NewSagaStep[Order](pipz.NewIdentity("reserve-inventory", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c)
-	step2 := ago.NewSagaStep[Order]("charge-payment", store, orderKey, chargePayment, refundPayment).
+	step2 := ago.NewSagaStep[Order](pipz.NewIdentity("charge-payment", ""), store, orderKey, chargePayment, refundPayment).
 		WithCapitan(c)
-	step3 := ago.NewSagaStep[Order]("ship-order", store, orderKey, shipOrder, cancelShipment).
+	step3 := ago.NewSagaStep[Order](pipz.NewIdentity("ship-order", ""), store, orderKey, shipOrder, cancelShipment).
 		WithCapitan(c)
 
 	// Compose pipeline
-	pipeline := pipz.NewSequence[*ago.Flow[Order]]("order-saga",
+	pipeline := pipz.NewSequence[*ago.Flow[Order]](pipz.NewIdentity("order-saga", ""),
 		step1, step2, step3,
 	)
 
@@ -123,17 +123,17 @@ func TestSagaFlow_FailureAndCompensation(t *testing.T) {
 	)
 
 	// Build steps
-	step1 := ago.NewSagaStep[Order]("step1", store, orderKey, step1Execute, step1Comp).
+	step1 := ago.NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Execute, step1Comp).
 		WithCapitan(c)
-	step2 := ago.NewSagaStep[Order]("step2", store, orderKey, step2Execute, step2Comp).
+	step2 := ago.NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Execute, step2Comp).
 		WithCapitan(c)
 
 	// Failing step
-	failingStep := pipz.Apply[*ago.Flow[Order]]("fail", func(_ context.Context, f *ago.Flow[Order]) (*ago.Flow[Order], error) {
+	failingStep := pipz.Apply[*ago.Flow[Order]](pipz.NewIdentity("fail", ""), func(_ context.Context, f *ago.Flow[Order]) (*ago.Flow[Order], error) {
 		return f, errors.New("simulated failure")
 	})
 
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	// Process with failure handling
 	flow := ago.NewFlow(Order{ID: "fail-order"}, step1Execute)
@@ -203,7 +203,7 @@ func TestSagaFlow_IdempotentRetry(t *testing.T) {
 		mu.Unlock()
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, executeSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, executeSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "idem-order"}, executeSignal)
@@ -247,7 +247,7 @@ func TestSagaFlow_ConcurrentSagas(t *testing.T) {
 	compSignal := capitan.NewSignal("concurrent.compensate", "Compensate")
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, executeSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, executeSignal, compSignal).
 		WithCapitan(c)
 
 	numSagas := 10
@@ -306,11 +306,11 @@ func TestSagaFlow_PartialCompensation(t *testing.T) {
 		step2Exec, step2Comp,
 	)
 
-	step1 := ago.NewSagaStep[Order]("step1", store, orderKey, step1Exec, step1Comp).
+	step1 := ago.NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Exec, step1Comp).
 		WithCapitan(c)
-	step2 := ago.NewSagaStep[Order]("step2", store, orderKey, step2Exec, step2Comp).
+	step2 := ago.NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Exec, step2Comp).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "partial-order"}, step1Exec)
 	flow.CorrelationID = "saga-partial-test"
@@ -355,9 +355,9 @@ func TestSagaFlow_CompensationIdempotency(t *testing.T) {
 		mu.Unlock()
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "comp-idem"}, execSignal)
 	flow.CorrelationID = "saga-comp-idem-test"
@@ -394,7 +394,7 @@ func TestSagaFlow_WithTimeout(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
 	// Slow step that exceeds timeout
-	slowStep := pipz.Apply[*ago.Flow[Order]]("slow", func(ctx context.Context, f *ago.Flow[Order]) (*ago.Flow[Order], error) {
+	slowStep := pipz.Apply[*ago.Flow[Order]](pipz.NewIdentity("slow", ""), func(ctx context.Context, f *ago.Flow[Order]) (*ago.Flow[Order], error) {
 		select {
 		case <-time.After(200 * time.Millisecond):
 			return f, nil
@@ -403,13 +403,13 @@ func TestSagaFlow_WithTimeout(t *testing.T) {
 		}
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	// Wrap in timeout
-	pipeline := pipz.NewSequence[*ago.Flow[Order]]("timed-saga",
+	pipeline := pipz.NewSequence[*ago.Flow[Order]](pipz.NewIdentity("timed-saga", ""),
 		step,
-		pipz.NewTimeout("timeout", slowStep, 50*time.Millisecond),
+		pipz.NewTimeout(pipz.NewIdentity("timeout", ""), slowStep, 50*time.Millisecond),
 	)
 
 	flow := ago.NewFlow(Order{ID: "timeout-order"}, execSignal)

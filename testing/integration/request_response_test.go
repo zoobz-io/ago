@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/ago"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // Query represents a test query for request/response tests.
@@ -49,7 +50,7 @@ func TestRequestResponse_Success(t *testing.T) {
 		)
 	})
 
-	req := ago.NewRequest[Query, Result]("search", requestSignal, responseSignal, queryKey, resultKey).
+	req := ago.NewRequest[Query, Result](pipz.NewIdentity("search", ""), requestSignal, responseSignal, queryKey, resultKey).
 		WithCapitan(c).
 		Timeout(100 * time.Millisecond)
 
@@ -88,7 +89,7 @@ func TestRequestResponse_Timeout(t *testing.T) {
 
 	// No responder - will timeout
 
-	req := ago.NewRequest[Query, Result]("slow", requestSignal, responseSignal, queryKey, resultKey).
+	req := ago.NewRequest[Query, Result](pipz.NewIdentity("slow", ""), requestSignal, responseSignal, queryKey, resultKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 
@@ -127,7 +128,7 @@ func TestRequestResponse_ConcurrentRequests(t *testing.T) {
 		)
 	})
 
-	req := ago.NewRequest[Query, Result]("concurrent", requestSignal, responseSignal, queryKey, resultKey).
+	req := ago.NewRequest[Query, Result](pipz.NewIdentity("concurrent", ""), requestSignal, responseSignal, queryKey, resultKey).
 		WithCapitan(c).
 		Timeout(500 * time.Millisecond)
 
@@ -198,7 +199,7 @@ func TestRequestResponse_CorrelationMismatch(t *testing.T) {
 		)
 	})
 
-	req := ago.NewRequest[Query, Result]("mismatch", requestSignal, responseSignal, queryKey, resultKey).
+	req := ago.NewRequest[Query, Result](pipz.NewIdentity("mismatch", ""), requestSignal, responseSignal, queryKey, resultKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 
@@ -230,7 +231,7 @@ func TestAwait_Success(t *testing.T) {
 		)
 	}()
 
-	await := ago.NewAwait[Order, string]("wait-shipment", eventSignal, trackingKey).
+	await := ago.NewAwait[Order, string](pipz.NewIdentity("wait-shipment", ""), eventSignal, trackingKey).
 		WithCapitan(c).
 		Timeout(200 * time.Millisecond)
 
@@ -261,7 +262,7 @@ func TestAwait_Timeout(t *testing.T) {
 	eventSignal := capitan.NewSignal("never.happens", "Never happens")
 	statusKey := capitan.NewStringKey("status")
 
-	await := ago.NewAwait[Order, string]("wait-never", eventSignal, statusKey).
+	await := ago.NewAwait[Order, string](pipz.NewIdentity("wait-never", ""), eventSignal, statusKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 
@@ -294,7 +295,7 @@ func TestAwait_MultipleWaiters(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 
-			await := ago.NewAwait[Order, string]("wait", eventSignal, statusKey).
+			await := ago.NewAwait[Order, string](pipz.NewIdentity("wait", ""), eventSignal, statusKey).
 				WithCapitan(c).
 				Timeout(200 * time.Millisecond)
 
@@ -361,11 +362,11 @@ func TestRequestResponse_ChainedRequests(t *testing.T) {
 		)
 	})
 
-	req1 := ago.NewRequest[Query, Result]("step1", req1Signal, resp1Signal, query1Key, result1Key).
+	req1 := ago.NewRequest[Query, Result](pipz.NewIdentity("step1", ""), req1Signal, resp1Signal, query1Key, result1Key).
 		WithCapitan(c).
 		Timeout(100 * time.Millisecond)
 
-	req2 := ago.NewRequest[Query, Result]("step2", req2Signal, resp2Signal, query2Key, result2Key).
+	req2 := ago.NewRequest[Query, Result](pipz.NewIdentity("step2", ""), req2Signal, resp2Signal, query2Key, result2Key).
 		WithCapitan(c).
 		Timeout(100 * time.Millisecond)
 

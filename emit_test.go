@@ -5,7 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestEmit_Basic(t *testing.T) {
@@ -30,7 +31,7 @@ func TestEmit_Basic(t *testing.T) {
 		mu.Unlock()
 	})
 
-	emit := NewEmit[Order]("emit-order", orderSignal, orderKey).WithCapitan(c)
+	emit := NewEmit[Order](pipz.NewIdentity("emit-order", ""), orderSignal, orderKey).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-123", Total: 99.99}, orderSignal)
 	_, err := emit.Process(ctx, flow)
@@ -73,7 +74,7 @@ func TestEmit_WithCorrelationAndCausation(t *testing.T) {
 		mu.Unlock()
 	})
 
-	emit := NewEmit[Order]("emit-order", orderSignal, orderKey).WithCapitan(c)
+	emit := NewEmit[Order](pipz.NewIdentity("emit-order", ""), orderSignal, orderKey).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-123"}, orderSignal)
 	flow.CorrelationID = "corr-456"
@@ -115,7 +116,7 @@ func TestEmit_WithFlowFields(t *testing.T) {
 		mu.Unlock()
 	})
 
-	emit := NewEmit[Order]("emit-order", orderSignal, orderKey).WithCapitan(c)
+	emit := NewEmit[Order](pipz.NewIdentity("emit-order", ""), orderSignal, orderKey).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-123"}, orderSignal)
 	flow.Set(statusKey.Field("pending"))
@@ -139,10 +140,10 @@ func TestEmit_Name(t *testing.T) {
 	orderSignal := capitan.NewSignal("order.created", "Order created")
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	emit := NewEmit[Order]("my-emit", orderSignal, orderKey)
+	emit := NewEmit[Order](pipz.NewIdentity("my-emit", ""), orderSignal, orderKey)
 
-	if emit.Name() != "my-emit" {
-		t.Errorf("expected name 'my-emit', got %q", emit.Name())
+	if emit.Identity().Name() != "my-emit" {
+		t.Errorf("expected name 'my-emit', got %q", emit.Identity().Name())
 	}
 }
 
@@ -150,7 +151,7 @@ func TestEmit_Close(t *testing.T) {
 	orderSignal := capitan.NewSignal("order.created", "Order created")
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	emit := NewEmit[Order]("my-emit", orderSignal, orderKey)
+	emit := NewEmit[Order](pipz.NewIdentity("my-emit", ""), orderSignal, orderKey)
 
 	if err := emit.Close(); err != nil {
 		t.Errorf("expected nil error from Close, got %v", err)
@@ -163,7 +164,7 @@ func TestEmit_GlobalCapitan(t *testing.T) {
 	orderSignal := capitan.NewSignal("order.global", "Order global")
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	emit := NewEmit[Order]("emit-order", orderSignal, orderKey)
+	emit := NewEmit[Order](pipz.NewIdentity("emit-order", ""), orderSignal, orderKey)
 	// No WithCapitan call - uses global
 
 	flow := NewFlow(Order{ID: "order-123"}, orderSignal)
@@ -179,7 +180,7 @@ func TestEmit_Build(t *testing.T) {
 	orderSignal := capitan.NewSignal("order.created", "Order created")
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	emit := NewEmit[Order]("my-emit", orderSignal, orderKey)
+	emit := NewEmit[Order](pipz.NewIdentity("my-emit", ""), orderSignal, orderKey)
 	built := emit.Build()
 
 	if built == nil {

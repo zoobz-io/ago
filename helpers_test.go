@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestDo(t *testing.T) {
@@ -344,16 +344,20 @@ func TestFallback(t *testing.T) {
 }
 
 func TestRateLimiter(t *testing.T) {
+	ctx := context.Background()
 	signal := capitan.NewSignal("test", "Test")
 
-	limiter := RateLimiter[Order]("test-limiter", 100.0, 10)
+	inner := Do("inner", func(_ context.Context, f *Flow[Order]) (*Flow[Order], error) {
+		return f, nil
+	})
 
-	if limiter.Name() != "test-limiter" {
-		t.Errorf("expected name 'test-limiter', got %q", limiter.Name())
+	limiter := RateLimiter[Order]("test-limiter", 100.0, 10, inner)
+
+	if limiter.Identity().Name() != "test-limiter" {
+		t.Errorf("expected name 'test-limiter', got %q", limiter.Identity().Name())
 	}
 
 	// Basic functionality test
-	ctx := context.Background()
 	flow := NewFlow(Order{ID: "order-1"}, signal)
 	_, err := limiter.Process(ctx, flow)
 
@@ -388,36 +392,36 @@ func TestSwitch(t *testing.T) {
 		return "low"
 	})
 
-	if sw.Name() != "test-switch" {
-		t.Errorf("expected name 'test-switch', got %q", sw.Name())
+	if sw.Identity().Name() != "test-switch" {
+		t.Errorf("expected name 'test-switch', got %q", sw.Identity().Name())
 	}
 }
 
 func TestConcurrent(t *testing.T) {
 	concurrent := Concurrent("test-concurrent",
-		func(original *Flow[Order], _ map[pipz.Name]*Flow[Order], _ map[pipz.Name]error) *Flow[Order] {
+		func(original *Flow[Order], _ map[pipz.Identity]*Flow[Order], _ map[pipz.Identity]error) *Flow[Order] {
 			return original
 		},
 	)
 
-	if concurrent.Name() != "test-concurrent" {
-		t.Errorf("expected name 'test-concurrent', got %q", concurrent.Name())
+	if concurrent.Identity().Name() != "test-concurrent" {
+		t.Errorf("expected name 'test-concurrent', got %q", concurrent.Identity().Name())
 	}
 }
 
 func TestRace(t *testing.T) {
 	race := Race[Order]("test-race")
 
-	if race.Name() != "test-race" {
-		t.Errorf("expected name 'test-race', got %q", race.Name())
+	if race.Identity().Name() != "test-race" {
+		t.Errorf("expected name 'test-race', got %q", race.Identity().Name())
 	}
 }
 
 func TestWorkerPool(t *testing.T) {
 	pool := WorkerPool[Order]("test-pool", 4)
 
-	if pool.Name() != "test-pool" {
-		t.Errorf("expected name 'test-pool', got %q", pool.Name())
+	if pool.Identity().Name() != "test-pool" {
+		t.Errorf("expected name 'test-pool', got %q", pool.Identity().Name())
 	}
 }
 

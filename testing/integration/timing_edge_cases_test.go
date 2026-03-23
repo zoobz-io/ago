@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // TestTiming_ResponseAfterTimeout tests what happens when a response arrives
@@ -43,7 +44,7 @@ func TestTiming_ResponseAfterTimeout(t *testing.T) {
 		}()
 	})
 
-	req := ago.NewRequest[Query, Result]("late", requestSignal, responseSignal, queryKey, resultKey).
+	req := ago.NewRequest[Query, Result](pipz.NewIdentity("late", ""), requestSignal, responseSignal, queryKey, resultKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 
@@ -92,7 +93,7 @@ func TestTiming_ConcurrentSagaAndRecovery(t *testing.T) {
 		atomic.AddInt64(&compCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	// Execute step (saga is now "running")
@@ -155,7 +156,7 @@ func TestTiming_RapidFireRequests(t *testing.T) {
 		)
 	})
 
-	req := ago.NewRequest[Query, Result]("rapid", requestSignal, responseSignal, queryKey, resultKey).
+	req := ago.NewRequest[Query, Result](pipz.NewIdentity("rapid", ""), requestSignal, responseSignal, queryKey, resultKey).
 		WithCapitan(c).
 		Timeout(500 * time.Millisecond)
 
@@ -219,9 +220,9 @@ func TestTiming_SagaStepDuringCompensation(t *testing.T) {
 		atomic.AddInt64(&compCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	// Initial execution
 	flow := ago.NewFlow(Order{ID: "race-saga"}, execSignal)
@@ -276,7 +277,7 @@ func TestTiming_AwaitEventBeforeHook(t *testing.T) {
 	)
 
 	// Now set up await - will it see the already-emitted event?
-	await := ago.NewAwait[Order, string]("wait-early", eventSignal, statusKey).
+	await := ago.NewAwait[Order, string](pipz.NewIdentity("wait-early", ""), eventSignal, statusKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 
@@ -315,7 +316,7 @@ func TestTiming_MultipleAwaitersRace(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			await := ago.NewAwait[Order, string]("wait", eventSignal, statusKey).
+			await := ago.NewAwait[Order, string](pipz.NewIdentity("wait", ""), eventSignal, statusKey).
 				WithCapitan(c).
 				Timeout(200 * time.Millisecond)
 
@@ -398,9 +399,9 @@ func TestTiming_CompensationWhileExecuting(t *testing.T) {
 		mu.Unlock()
 	})
 
-	s1 := ago.NewSagaStep[Order]("step1", store, orderKey, step1Exec, step1Comp).WithCapitan(c)
-	s2 := ago.NewSagaStep[Order]("step2", store, orderKey, step2Exec, step2Comp).WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	s1 := ago.NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Exec, step1Comp).WithCapitan(c)
+	s2 := ago.NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Exec, step2Comp).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "slow-saga"}, step1Exec)
 	flow.CorrelationID = "slow-execution-test"
@@ -475,7 +476,7 @@ func TestTiming_ConcurrentStepExecution(t *testing.T) {
 		atomic.AddInt64(&execCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "concurrent-step"}, execSignal)
@@ -523,9 +524,9 @@ func TestTiming_ConcurrentCompensation(t *testing.T) {
 		atomic.AddInt64(&compCount, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "concurrent-comp"}, execSignal)
 	flow.CorrelationID = "concurrent-comp-test"

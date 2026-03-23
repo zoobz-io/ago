@@ -1,22 +1,22 @@
 # ago
 
-[![CI Status](https://github.com/zoobzio/ago/workflows/CI/badge.svg)](https://github.com/zoobzio/ago/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/zoobzio/ago/graph/badge.svg?branch=main)](https://codecov.io/gh/zoobzio/ago)
-[![Go Report Card](https://goreportcard.com/badge/github.com/zoobzio/ago)](https://goreportcard.com/report/github.com/zoobzio/ago)
-[![CodeQL](https://github.com/zoobzio/ago/workflows/CodeQL/badge.svg)](https://github.com/zoobzio/ago/security/code-scanning)
-[![Go Reference](https://pkg.go.dev/badge/github.com/zoobzio/ago.svg)](https://pkg.go.dev/github.com/zoobzio/ago)
-[![License](https://img.shields.io/github/license/zoobzio/ago)](LICENSE)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/zoobzio/ago)](go.mod)
-[![Release](https://img.shields.io/github/v/release/zoobzio/ago)](https://github.com/zoobzio/ago/releases)
+[![CI Status](https://github.com/zoobz-io/ago/workflows/CI/badge.svg)](https://github.com/zoobz-io/ago/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/zoobz-io/ago/graph/badge.svg?branch=main)](https://codecov.io/gh/zoobz-io/ago)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zoobz-io/ago)](https://goreportcard.com/report/github.com/zoobz-io/ago)
+[![CodeQL](https://github.com/zoobz-io/ago/workflows/CodeQL/badge.svg)](https://github.com/zoobz-io/ago/security/code-scanning)
+[![Go Reference](https://pkg.go.dev/badge/github.com/zoobz-io/ago.svg)](https://pkg.go.dev/github.com/zoobz-io/ago)
+[![License](https://img.shields.io/github/license/zoobz-io/ago)](LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/zoobz-io/ago)](go.mod)
+[![Release](https://img.shields.io/github/v/release/zoobz-io/ago)](https://github.com/zoobz-io/ago/releases)
 
 Event-driven orchestration primitives for Go.
 
-ago ("I do" in Latin) bridges [capitan](https://github.com/zoobzio/capitan) events with [pipz](https://github.com/zoobzio/pipz) pipelines, enabling distributed sagas, request/response patterns, and stateful coordination across processes.
+ago ("I do" in Latin) bridges [capitan](https://github.com/zoobz-io/capitan) events with [pipz](https://github.com/zoobz-io/pipz) pipelines, enabling distributed sagas, request/response patterns, and stateful coordination across processes.
 
 ## Installation
 
 ```bash
-go get github.com/zoobzio/ago
+go get github.com/zoobz-io/ago
 ```
 
 Requirements: Go 1.24+
@@ -200,7 +200,7 @@ pipeline := ago.Sequence("order-pipeline",
 
     // Parallel execution
     ago.Concurrent("parallel-notify",
-        func(original *ago.Flow[Order], results map[pipz.Name]*ago.Flow[Order], errors map[pipz.Name]error) *ago.Flow[Order] {
+        func(original *ago.Flow[Order], results map[pipz.Identity]*ago.Flow[Order], errors map[pipz.Identity]error) *ago.Flow[Order] {
             return original
         },
         emailNotify,
@@ -244,9 +244,9 @@ import (
     "context"
     "time"
 
-    "github.com/zoobzio/ago"
-    "github.com/zoobzio/capitan"
-    "github.com/zoobzio/pipz"
+    "github.com/zoobz-io/ago"
+    "github.com/zoobz-io/capitan"
+    "github.com/zoobz-io/pipz"
 )
 
 type Order struct {

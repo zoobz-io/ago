@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 type TestPayload struct {
@@ -15,7 +16,7 @@ func TestCorrelate(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	flow := NewFlow(TestPayload{ID: "1"}, signal)
 
-	correlate := Correlate[TestPayload]("correlate")
+	correlate := Correlate[TestPayload](pipz.NewIdentity("correlate", ""))
 
 	result, err := correlate.Process(context.Background(), flow)
 	if err != nil {
@@ -32,7 +33,7 @@ func TestCorrelate_ExistingID(t *testing.T) {
 	flow := NewFlow(TestPayload{ID: "1"}, signal)
 	flow.CorrelationID = "existing-id"
 
-	correlate := Correlate[TestPayload]("correlate")
+	correlate := Correlate[TestPayload](pipz.NewIdentity("correlate", ""))
 
 	result, err := correlate.Process(context.Background(), flow)
 	if err != nil {
@@ -48,7 +49,7 @@ func TestCorrelateFrom(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	flow := NewFlow(TestPayload{ID: "1"}, signal)
 
-	correlate := CorrelateFrom[TestPayload]("correlate", "parent-corr")
+	correlate := CorrelateFrom[TestPayload](pipz.NewIdentity("correlate", ""), "parent-corr")
 
 	result, err := correlate.Process(context.Background(), flow)
 	if err != nil {

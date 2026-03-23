@@ -6,8 +6,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/herald"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/herald"
+	"github.com/zoobz-io/pipz"
 )
 
 // mockProvider implements herald.Provider for testing.
@@ -37,6 +38,10 @@ func (*mockProvider) Subscribe(_ context.Context) <-chan herald.Result[herald.Me
 	return nil
 }
 
+func (*mockProvider) Ping(_ context.Context) error {
+	return nil
+}
+
 func (*mockProvider) Close() error {
 	return nil
 }
@@ -54,7 +59,7 @@ func TestPublish(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	provider := &mockProvider{}
 
-	publish := Publish[Order]("publish-order", provider)
+	publish := Publish[Order](pipz.NewIdentity("publish-order", ""), provider)
 
 	flow := NewFlow(Order{ID: "order-123", Total: 99.99}, signal)
 	flow.CorrelationID = "corr-123"
@@ -103,7 +108,7 @@ func TestPublish_WithFlowMetadata(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	provider := &mockProvider{}
 
-	publish := Publish[Order]("publish-order", provider)
+	publish := Publish[Order](pipz.NewIdentity("publish-order", ""), provider)
 
 	flow := NewFlow(Order{ID: "order-456"}, signal)
 	flow.Metadata = map[string]string{
@@ -135,7 +140,7 @@ func TestPublish_NoCorrelationID(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	provider := &mockProvider{}
 
-	publish := Publish[Order]("publish-order", provider)
+	publish := Publish[Order](pipz.NewIdentity("publish-order", ""), provider)
 
 	flow := NewFlow(Order{ID: "order-789"}, signal)
 	// No CorrelationID or CausationID set
@@ -161,7 +166,7 @@ func TestPublish_ProviderError(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	provider := &mockProvider{failNext: true}
 
-	publish := Publish[Order]("publish-order", provider)
+	publish := Publish[Order](pipz.NewIdentity("publish-order", ""), provider)
 
 	flow := NewFlow(Order{ID: "order-fail"}, signal)
 
@@ -176,7 +181,7 @@ func TestPublish_MultipleMessages(t *testing.T) {
 	signal := capitan.NewSignal("test", "Test")
 	provider := &mockProvider{}
 
-	publish := Publish[Order]("publish-order", provider)
+	publish := Publish[Order](pipz.NewIdentity("publish-order", ""), provider)
 
 	for i := 0; i < 5; i++ {
 		flow := NewFlow(Order{ID: "order-" + string(rune('0'+i))}, signal)

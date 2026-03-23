@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // ErrTimeout indicates a request timed out waiting for response.
@@ -14,7 +14,7 @@ var ErrTimeout = errors.New("ago: request timeout")
 
 // Request sends a request and waits for a correlated response.
 type Request[T, R any] struct {
-	name           pipz.Name
+	identity       pipz.Identity
 	capitan        *capitan.Capitan
 	requestSignal  capitan.Signal
 	responseSignal capitan.Signal
@@ -25,14 +25,14 @@ type Request[T, R any] struct {
 
 // NewRequest creates a request/response primitive.
 func NewRequest[T, R any](
-	name pipz.Name,
+	identity pipz.Identity,
 	requestSignal capitan.Signal,
 	responseSignal capitan.Signal,
 	requestKey capitan.GenericKey[T],
 	responseKey capitan.GenericKey[R],
 ) *Request[T, R] {
 	return &Request[T, R]{
-		name:           name,
+		identity:       identity,
 		requestSignal:  requestSignal,
 		responseSignal: responseSignal,
 		requestKey:     requestKey,
@@ -55,7 +55,7 @@ func (r *Request[T, R]) Timeout(d time.Duration) *Request[T, R] {
 
 // Build creates the chainable processor.
 func (r *Request[T, R]) Build() pipz.Chainable[*Flow[T]] {
-	return pipz.Apply(r.name, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
+	return pipz.Apply(r.identity, func(ctx context.Context, f *Flow[T]) (*Flow[T], error) {
 		// Create response channel
 		responseCh := make(chan R, 1)
 		hookFn := func(_ context.Context, e *capitan.Event) {
@@ -110,9 +110,14 @@ func (r *Request[T, R]) Build() pipz.Chainable[*Flow[T]] {
 	})
 }
 
-// Name returns the processor name.
-func (r *Request[T, R]) Name() pipz.Name {
-	return r.name
+// Identity returns the processor identity.
+func (r *Request[T, R]) Identity() pipz.Identity {
+	return r.identity
+}
+
+// Schema returns the processor schema.
+func (r *Request[T, R]) Schema() pipz.Node {
+	return pipz.Node{Identity: r.identity, Type: "request"}
 }
 
 // Process implements Chainable.

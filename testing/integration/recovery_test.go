@@ -5,9 +5,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // TestRecoverSagas_IncompleteSagas tests recovery of incomplete sagas after restart.
@@ -27,7 +28,7 @@ func TestRecoverSagas_IncompleteSagas(t *testing.T) {
 	agotesting.HookTracker(c, tracker, compSignal, ago.SagaCompensating, ago.SagaCompleted)
 
 	// Create saga step and execute (simulating pre-crash state)
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "recover-order"}, execSignal)
@@ -77,7 +78,7 @@ func TestRecoverSagas_MultipleSagas(t *testing.T) {
 
 	agotesting.HookTracker(c, tracker, compSignal)
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	// Create multiple incomplete sagas
@@ -149,9 +150,9 @@ func TestRecoverSagas_MultiStepCompensation(t *testing.T) {
 		mu.Unlock()
 	})
 
-	s1 := ago.NewSagaStep[Order]("step1", store, orderKey, step1Exec, step1Comp).WithCapitan(c)
-	s2 := ago.NewSagaStep[Order]("step2", store, orderKey, step2Exec, step2Comp).WithCapitan(c)
-	s3 := ago.NewSagaStep[Order]("step3", store, orderKey, step3Exec, step3Comp).WithCapitan(c)
+	s1 := ago.NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Exec, step1Comp).WithCapitan(c)
+	s2 := ago.NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Exec, step2Comp).WithCapitan(c)
+	s3 := ago.NewSagaStep[Order](pipz.NewIdentity("step3", ""), store, orderKey, step3Exec, step3Comp).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "multi-step"}, step1Exec)
 	flow.CorrelationID = "multi-step-recovery"
@@ -217,9 +218,9 @@ func TestRecoverSagas_CompletedSagasIgnored(t *testing.T) {
 
 	agotesting.HookTracker(c, tracker, compSignal)
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "completed-order"}, execSignal)
 	flow.CorrelationID = "completed-saga"
@@ -273,8 +274,8 @@ func TestRecoverSagas_PartiallyCompensated(t *testing.T) {
 		mu.Unlock()
 	})
 
-	s1 := ago.NewSagaStep[Order]("step1", store, orderKey, step1Exec, step1Comp).WithCapitan(c)
-	s2 := ago.NewSagaStep[Order]("step2", store, orderKey, step2Exec, step2Comp).WithCapitan(c)
+	s1 := ago.NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Exec, step1Comp).WithCapitan(c)
+	s2 := ago.NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Exec, step2Comp).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "partial-comp"}, step1Exec)
 	flow.CorrelationID = "partial-comp-saga"

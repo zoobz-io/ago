@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 type RequestPayload struct {
@@ -38,7 +39,7 @@ func TestRequest_Success(t *testing.T) {
 	})
 
 	// Create request primitive
-	req := NewRequest[RequestPayload, ResponsePayload]("query", requestSignal, responseSignal, requestKey, responseKey).
+	req := NewRequest[RequestPayload, ResponsePayload](pipz.NewIdentity("query", ""), requestSignal, responseSignal, requestKey, responseKey).
 		WithCapitan(c).
 		Timeout(100 * time.Millisecond)
 
@@ -75,7 +76,7 @@ func TestRequest_Timeout(t *testing.T) {
 
 	// No responder - will timeout
 
-	req := NewRequest[RequestPayload, ResponsePayload]("slow", requestSignal, responseSignal, requestKey, responseKey).
+	req := NewRequest[RequestPayload, ResponsePayload](pipz.NewIdentity("slow", ""), requestSignal, responseSignal, requestKey, responseKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 
@@ -108,7 +109,7 @@ func TestAwait_Success(t *testing.T) {
 		)
 	}()
 
-	await := NewAwait[Order, string]("wait-complete", eventSignal, statusKey).
+	await := NewAwait[Order, string](pipz.NewIdentity("wait-complete", ""), eventSignal, statusKey).
 		WithCapitan(c).
 		Timeout(100 * time.Millisecond)
 
@@ -140,7 +141,7 @@ func TestAwait_Timeout(t *testing.T) {
 	eventSignal := capitan.NewSignal("never.happens", "Never happens")
 	statusKey := capitan.NewStringKey("status")
 
-	await := NewAwait[Order, string]("wait-never", eventSignal, statusKey).
+	await := NewAwait[Order, string](pipz.NewIdentity("wait-never", ""), eventSignal, statusKey).
 		WithCapitan(c).
 		Timeout(50 * time.Millisecond)
 

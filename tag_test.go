@@ -4,14 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestTag(t *testing.T) {
 	ctx := context.Background()
 	signal := capitan.NewSignal("test", "Test")
 
-	tag := Tag[Order]("add-version", "version", "1.0.0")
+	tag := Tag[Order](pipz.NewIdentity("add-version", ""), "version", "1.0.0")
 
 	flow := NewFlow(Order{ID: "order-1"}, signal)
 	result, err := tag.Process(ctx, flow)
@@ -28,7 +29,7 @@ func TestTag_InitializesMetadata(t *testing.T) {
 	ctx := context.Background()
 	signal := capitan.NewSignal("test", "Test")
 
-	tag := Tag[Order]("add-tag", "key", "value")
+	tag := Tag[Order](pipz.NewIdentity("add-tag", ""), "key", "value")
 
 	flow := NewFlow(Order{ID: "order-1"}, signal)
 	flow.Metadata = nil // Ensure metadata is nil
@@ -50,7 +51,7 @@ func TestTag_OverwritesExisting(t *testing.T) {
 	ctx := context.Background()
 	signal := capitan.NewSignal("test", "Test")
 
-	tag := Tag[Order]("overwrite", "key", "new-value")
+	tag := Tag[Order](pipz.NewIdentity("overwrite", ""), "key", "new-value")
 
 	flow := NewFlow(Order{ID: "order-1"}, signal)
 	flow.Metadata = map[string]string{"key": "old-value"}
@@ -69,7 +70,7 @@ func TestTagFrom(t *testing.T) {
 	ctx := context.Background()
 	signal := capitan.NewSignal("test", "Test")
 
-	tagFrom := TagFrom[Order]("add-order-id", "order_id", func(o Order) string {
+	tagFrom := TagFrom[Order](pipz.NewIdentity("add-order-id", ""), "order_id", func(o Order) string {
 		return o.ID
 	})
 
@@ -88,7 +89,7 @@ func TestTagFrom_InitializesMetadata(t *testing.T) {
 	ctx := context.Background()
 	signal := capitan.NewSignal("test", "Test")
 
-	tagFrom := TagFrom[Order]("add-id", "id", func(o Order) string {
+	tagFrom := TagFrom[Order](pipz.NewIdentity("add-id", ""), "id", func(o Order) string {
 		return o.ID
 	})
 
@@ -112,7 +113,7 @@ func TestTagFrom_ComplexExtraction(t *testing.T) {
 	ctx := context.Background()
 	signal := capitan.NewSignal("test", "Test")
 
-	tagFrom := TagFrom[Order]("add-total-category", "category", func(o Order) string {
+	tagFrom := TagFrom[Order](pipz.NewIdentity("add-total-category", ""), "category", func(o Order) string {
 		if o.Total > 100.0 {
 			return "high-value"
 		}

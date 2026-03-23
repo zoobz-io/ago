@@ -3,24 +3,24 @@ package ago
 import (
 	"context"
 
-	"github.com/zoobzio/capitan"
-	"github.com/zoobzio/pipz"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // Emit emits a capitan signal with fields derived from the flow.
 type Emit[T any] struct {
-	name    pipz.Name
-	capitan *capitan.Capitan
-	signal  capitan.Signal
-	key     capitan.GenericKey[T]
+	identity pipz.Identity
+	capitan  *capitan.Capitan
+	signal   capitan.Signal
+	key      capitan.GenericKey[T]
 }
 
 // NewEmit creates an emit primitive.
-func NewEmit[T any](name pipz.Name, signal capitan.Signal, key capitan.GenericKey[T]) *Emit[T] {
+func NewEmit[T any](identity pipz.Identity, signal capitan.Signal, key capitan.GenericKey[T]) *Emit[T] {
 	return &Emit[T]{
-		name:   name,
-		signal: signal,
-		key:    key,
+		identity: identity,
+		signal:   signal,
+		key:      key,
 	}
 }
 
@@ -32,7 +32,7 @@ func (e *Emit[T]) WithCapitan(c *capitan.Capitan) *Emit[T] {
 
 // Build creates the chainable processor.
 func (e *Emit[T]) Build() pipz.Chainable[*Flow[T]] {
-	return pipz.Effect(e.name, func(ctx context.Context, f *Flow[T]) error {
+	return pipz.Effect(e.identity, func(ctx context.Context, f *Flow[T]) error {
 		fields := []capitan.Field{e.key.Field(f.Payload)}
 		fields = append(fields, f.Fields()...)
 		if f.CorrelationID != "" {
@@ -51,9 +51,14 @@ func (e *Emit[T]) Build() pipz.Chainable[*Flow[T]] {
 	})
 }
 
-// Name returns the processor name.
-func (e *Emit[T]) Name() pipz.Name {
-	return e.name
+// Identity returns the processor identity.
+func (e *Emit[T]) Identity() pipz.Identity {
+	return e.identity
+}
+
+// Schema returns the processor schema.
+func (e *Emit[T]) Schema() pipz.Node {
+	return pipz.Node{Identity: e.identity, Type: "emit"}
 }
 
 // Process implements Chainable.

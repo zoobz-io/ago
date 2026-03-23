@@ -7,9 +7,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/zoobzio/ago"
-	agotesting "github.com/zoobzio/ago/testing"
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/ago"
+	agotesting "github.com/zoobz-io/ago/testing"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 // TestHandlerFailure_ExecuteHandlerPanics tests behavior when an execute signal handler panics.
@@ -33,7 +34,7 @@ func TestHandlerFailure_ExecuteHandlerPanics(t *testing.T) {
 		panic("handler panic!")
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "panic-order"}, execSignal)
@@ -91,9 +92,9 @@ func TestHandlerFailure_CompensationHandlerFails(t *testing.T) {
 		// There's no mechanism to report handler failure back to ago
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "comp-fail-order"}, execSignal)
 	flow.CorrelationID = "handler-comp-fail-test"
@@ -160,10 +161,10 @@ func TestHandlerFailure_PartialCompensationHandlerFailure(t *testing.T) {
 		mu.Unlock()
 	})
 
-	s1 := ago.NewSagaStep[Order]("step1", store, orderKey, step1Exec, step1Comp).WithCapitan(c)
-	s2 := ago.NewSagaStep[Order]("step2", store, orderKey, step2Exec, step2Comp).WithCapitan(c)
-	s3 := ago.NewSagaStep[Order]("step3", store, orderKey, step3Exec, step3Comp).WithCapitan(c)
-	compensate := ago.NewCompensate[Order]("rollback", store, orderKey).WithCapitan(c)
+	s1 := ago.NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Exec, step1Comp).WithCapitan(c)
+	s2 := ago.NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Exec, step2Comp).WithCapitan(c)
+	s3 := ago.NewSagaStep[Order](pipz.NewIdentity("step3", ""), store, orderKey, step3Exec, step3Comp).WithCapitan(c)
+	compensate := ago.NewCompensate[Order](pipz.NewIdentity("rollback", ""), store, orderKey).WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "partial-comp-fail"}, step1Exec)
 	flow.CorrelationID = "partial-comp-fail-test"
@@ -212,7 +213,7 @@ func TestHandlerFailure_SlowHandler(t *testing.T) {
 		atomic.AddInt64(&handlerFinished, 1)
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "slow-order"}, execSignal)
@@ -264,7 +265,7 @@ func TestHandlerFailure_HandlerErrorViaChannel(t *testing.T) {
 		errChan <- nil // Success
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	flow := ago.NewFlow(Order{ID: "error-channel"}, execSignal)
@@ -315,7 +316,7 @@ func TestHandlerFailure_IdempotencyKeyUsage(t *testing.T) {
 		mu.Unlock()
 	})
 
-	step := ago.NewSagaStep[Order]("step", store, orderKey, execSignal, compSignal).
+	step := ago.NewSagaStep[Order](pipz.NewIdentity("step", ""), store, orderKey, execSignal, compSignal).
 		WithCapitan(c)
 
 	// Execute same step multiple times

@@ -6,7 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zoobzio/capitan"
+	"github.com/zoobz-io/capitan"
+	"github.com/zoobz-io/pipz"
 )
 
 func TestCompensate_Basic(t *testing.T) {
@@ -31,7 +32,7 @@ func TestCompensate_Basic(t *testing.T) {
 	})
 
 	// Create and execute saga step
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-1", Total: 100.0}, reserveInventory)
@@ -40,7 +41,7 @@ func TestCompensate_Basic(t *testing.T) {
 	_, _ = step.Process(ctx, flow)
 
 	// Now run compensation
-	compensate := NewCompensate[Order]("compensate", store, orderKey).WithCapitan(c)
+	compensate := NewCompensate[Order](pipz.NewIdentity("compensate", ""), store, orderKey).WithCapitan(c)
 	_, err := compensate.Process(ctx, flow)
 	if err != nil {
 		t.Fatalf("compensation failed: %v", err)
@@ -79,9 +80,9 @@ func TestCompensate_MultiStep(t *testing.T) {
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
 	// Create steps
-	s1 := NewSagaStep[Order]("step1", store, orderKey, step1Execute, step1Comp).WithCapitan(c)
-	s2 := NewSagaStep[Order]("step2", store, orderKey, step2Execute, step2Comp).WithCapitan(c)
-	s3 := NewSagaStep[Order]("step3", store, orderKey, step3Execute, step3Comp).WithCapitan(c)
+	s1 := NewSagaStep[Order](pipz.NewIdentity("step1", ""), store, orderKey, step1Execute, step1Comp).WithCapitan(c)
+	s2 := NewSagaStep[Order](pipz.NewIdentity("step2", ""), store, orderKey, step2Execute, step2Comp).WithCapitan(c)
+	s3 := NewSagaStep[Order](pipz.NewIdentity("step3", ""), store, orderKey, step3Execute, step3Comp).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "multi-1"}, step1Execute)
 	flow.CorrelationID = "multi-saga"
@@ -117,7 +118,7 @@ func TestCompensate_MultiStep(t *testing.T) {
 	})
 
 	// Run compensation
-	compensate := NewCompensate[Order]("compensate", store, orderKey).WithCapitan(c)
+	compensate := NewCompensate[Order](pipz.NewIdentity("compensate", ""), store, orderKey).WithCapitan(c)
 	_, _ = compensate.Process(ctx, flow)
 
 	c.Shutdown()
@@ -154,7 +155,7 @@ func TestCompensate_Idempotency(t *testing.T) {
 	})
 
 	// Create and execute saga step
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-1", Total: 100.0}, reserveInventory)
@@ -163,7 +164,7 @@ func TestCompensate_Idempotency(t *testing.T) {
 	_, _ = step.Process(ctx, flow)
 
 	// Run compensation multiple times (simulating retries)
-	compensate := NewCompensate[Order]("compensate", store, orderKey).WithCapitan(c)
+	compensate := NewCompensate[Order](pipz.NewIdentity("compensate", ""), store, orderKey).WithCapitan(c)
 	_, _ = compensate.Process(ctx, flow)
 	_, _ = compensate.Process(ctx, flow)
 	_, _ = compensate.Process(ctx, flow)
@@ -198,7 +199,7 @@ func TestCompensate_IdempotencyKey(t *testing.T) {
 		mu.Unlock()
 	})
 
-	step := NewSagaStep[Order]("reserve", store, orderKey, reserveInventory, releaseInventory).
+	step := NewSagaStep[Order](pipz.NewIdentity("reserve", ""), store, orderKey, reserveInventory, releaseInventory).
 		WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-1", Total: 100.0}, reserveInventory)
@@ -206,7 +207,7 @@ func TestCompensate_IdempotencyKey(t *testing.T) {
 
 	_, _ = step.Process(ctx, flow)
 
-	compensate := NewCompensate[Order]("compensate", store, orderKey).WithCapitan(c)
+	compensate := NewCompensate[Order](pipz.NewIdentity("compensate", ""), store, orderKey).WithCapitan(c)
 	_, _ = compensate.Process(ctx, flow)
 
 	c.Shutdown()
@@ -224,10 +225,10 @@ func TestCompensate_Name(t *testing.T) {
 	store := NewMemoryStore()
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	compensate := NewCompensate[Order]("my-compensate", store, orderKey)
+	compensate := NewCompensate[Order](pipz.NewIdentity("my-compensate", ""), store, orderKey)
 
-	if compensate.Name() != "my-compensate" {
-		t.Errorf("expected name 'my-compensate', got %q", compensate.Name())
+	if compensate.Identity().Name() != "my-compensate" {
+		t.Errorf("expected name 'my-compensate', got %q", compensate.Identity().Name())
 	}
 }
 
@@ -235,7 +236,7 @@ func TestCompensate_Close(t *testing.T) {
 	store := NewMemoryStore()
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	compensate := NewCompensate[Order]("my-compensate", store, orderKey)
+	compensate := NewCompensate[Order](pipz.NewIdentity("my-compensate", ""), store, orderKey)
 
 	if err := compensate.Close(); err != nil {
 		t.Errorf("expected nil error from Close, got %v", err)
@@ -251,7 +252,7 @@ func TestCompensate_NotFound(t *testing.T) {
 
 	orderKey := capitan.NewKey[Order]("order", "test.Order")
 
-	compensate := NewCompensate[Order]("compensate", store, orderKey).WithCapitan(c)
+	compensate := NewCompensate[Order](pipz.NewIdentity("compensate", ""), store, orderKey).WithCapitan(c)
 
 	flow := NewFlow(Order{ID: "order-1"}, capitan.NewSignal("test", "Test"))
 	flow.CorrelationID = "nonexistent-saga"
