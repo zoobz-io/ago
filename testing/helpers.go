@@ -1,3 +1,4 @@
+// Package testing provides test helpers for ago.
 package testing
 
 import (
