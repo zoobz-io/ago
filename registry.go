@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -169,7 +171,7 @@ func (*Registry) safeExecute(ctx context.Context, handler HandlerFunc, inv *Invo
 	return handler(ctx, inv)
 }
 
-// Tools returns all registered tool definitions.
+// Tools returns all registered tool definitions, sorted by name.
 func (r *Registry) Tools() []ToolDefinition {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -177,6 +179,9 @@ func (r *Registry) Tools() []ToolDefinition {
 	for _, t := range r.tools {
 		tools = append(tools, t)
 	}
+	slices.SortFunc(tools, func(a, b ToolDefinition) int {
+		return strings.Compare(a.Spec().Name, b.Spec().Name)
+	})
 	return tools
 }
 
