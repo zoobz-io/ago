@@ -43,7 +43,7 @@ type ToolDefinition interface {
 // Parallel to rocco.Handler[In, Out]. Scans In and Out via sentinel
 // at creation time for schema generation.
 type Tool[In, Out any] struct {
-	fn         func(context.Context, *Invocation) (Out, error)
+	fn         func(*ToolRequest[In]) (Out, error)
 	spec       ToolSpec
 	inputMeta  sentinel.Metadata
 	outputMeta sentinel.Metadata
@@ -52,9 +52,9 @@ type Tool[In, Out any] struct {
 }
 
 // NewTool creates a typed tool. Scans In and Out via sentinel at creation.
-// The handler function receives context and the full Invocation. Use
-// TypedInput[In](inv) to extract the deserialized, typed input.
-func NewTool[In, Out any](name string, fn func(context.Context, *Invocation) (Out, error)) *Tool[In, Out] {
+// The handler function receives a ToolRequest[In] with the deserialized,
+// validated input in req.Body — parallel to rocco's Request[In].
+func NewTool[In, Out any](name string, fn func(*ToolRequest[In]) (Out, error)) *Tool[In, Out] {
 	inMeta := sentinel.Scan[In]()
 	outMeta := sentinel.Scan[Out]()
 
@@ -69,12 +69,13 @@ func NewTool[In, Out any](name string, fn func(context.Context, *Invocation) (Ou
 }
 
 // Handle implements ToolDefinition. Deserializes input JSON into the typed
-// In struct, calls the handler, and wraps the output in a Result.
+// In struct, builds a ToolRequest[In], calls the handler, wraps the output.
 func (t *Tool[In, Out]) Handle(ctx context.Context, inv *Invocation) (*Result, error) {
+	var input In
+
 	// Deserialize raw JSON into typed input if we have raw bytes
 	// and the input type is not NoInput.
 	if len(inv.RawInput) > 0 && t.inputMeta.TypeName != "NoInput" {
-		var input In
 		if err := json.Unmarshal(inv.RawInput, &input); err != nil {
 			return nil, ErrValidation.
 				WithMessage(fmt.Sprintf("invalid input JSON: %v", err)).
@@ -87,12 +88,20 @@ func (t *Tool[In, Out]) Handle(ctx context.Context, inv *Invocation) (*Result, e
 				return nil, validationErrorFromValidate(err)
 			}
 		}
+	}
 
-		inv.Input = input
+	// Build the typed request — Body is already deserialized and validated.
+	req := &ToolRequest[In]{
+		Context:  ctx,
+		Body:     input,
+		Identity: inv.Identity,
+		ID:       inv.ID,
+		ToolName: inv.ToolName,
+		Metadata: inv.Metadata,
 	}
 
 	// Call the typed handler.
-	output, err := t.fn(ctx, inv)
+	output, err := t.fn(req)
 	if err != nil {
 		// If it's a declared tool error, return as Result (not dispatch error).
 		var e ErrorDefinition

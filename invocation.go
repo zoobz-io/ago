@@ -3,7 +3,8 @@ package ago
 import "context"
 
 // Invocation represents a single tool call from an LLM.
-// This is what tool handlers and middleware receive.
+// This is the type-erased dispatch context used by middleware and the registry.
+// Handlers receive a typed ToolRequest[In] instead.
 type Invocation struct {
 	// Context carries deadlines, cancellation, and request-scoped values.
 	Context context.Context
@@ -14,10 +15,6 @@ type Invocation struct {
 	// ToolName is the name of the tool being called.
 	ToolName string
 
-	// Input is the deserialized, typed input. Set by Tool[In, Out].Handle
-	// after JSON deserialization.
-	Input any
-
 	// RawInput is the raw JSON bytes before deserialization.
 	// Available for middleware that needs to inspect or log the raw payload.
 	RawInput []byte
@@ -27,13 +24,6 @@ type Invocation struct {
 
 	// Metadata carries arbitrary key-value pairs set by middleware or the caller.
 	Metadata map[string]any
-}
-
-// TypedInput extracts the typed input from an invocation.
-// Returns the value and true if the type assertion succeeds.
-func TypedInput[In any](inv *Invocation) (In, bool) {
-	v, ok := inv.Input.(In)
-	return v, ok
 }
 
 // SetMeta sets a metadata key-value pair on the invocation.
@@ -51,4 +41,26 @@ func (inv *Invocation) GetMeta(key string) (any, bool) {
 	}
 	v, ok := inv.Metadata[key]
 	return v, ok
+}
+
+// ToolRequest is the typed request context passed to tool handlers.
+// Parallel to rocco.Request[In] — Body is already deserialized and validated.
+type ToolRequest[In any] struct {
+	// Context carries deadlines, cancellation, and request-scoped values.
+	Context context.Context
+
+	// Body is the deserialized, validated input.
+	Body In
+
+	// Identity is the caller identity.
+	Identity Identity
+
+	// ID is the unique execution identifier.
+	ID string
+
+	// ToolName is the name of the tool being called.
+	ToolName string
+
+	// Metadata carries arbitrary key-value pairs set by middleware.
+	Metadata map[string]any
 }

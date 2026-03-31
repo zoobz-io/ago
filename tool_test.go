@@ -17,9 +17,8 @@ type EchoOutput struct {
 }
 
 func TestNewTool(t *testing.T) {
-	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ context.Context, inv *ago.Invocation) (EchoOutput, error) {
-		input, _ := ago.TypedInput[EchoInput](inv)
-		return EchoOutput{Echo: input.Message}, nil
+	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(req *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
+		return EchoOutput{Echo: req.Body.Message}, nil
 	})
 
 	spec := tool.Spec()
@@ -39,7 +38,7 @@ func TestNewTool(t *testing.T) {
 }
 
 func TestToolWithDescription(t *testing.T) {
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("noop", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("noop", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, nil
 	}).WithDescription("A no-op tool")
 
@@ -57,7 +56,7 @@ func TestToolWithMiddleware(t *testing.T) {
 		}
 	}
 
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("mw-test", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("mw-test", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, nil
 	}).WithMiddleware(mw)
 
@@ -70,7 +69,7 @@ func TestToolWithMiddleware(t *testing.T) {
 func TestToolWithErrors(t *testing.T) {
 	customErr := ago.NewError[ago.NoDetails]("CUSTOM", "custom error")
 
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("err-test", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("err-test", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, nil
 	}).WithErrors(customErr)
 
@@ -80,9 +79,8 @@ func TestToolWithErrors(t *testing.T) {
 }
 
 func TestToolHandleSuccess(t *testing.T) {
-	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ context.Context, inv *ago.Invocation) (EchoOutput, error) {
-		input, _ := ago.TypedInput[EchoInput](inv)
-		return EchoOutput{Echo: input.Message}, nil
+	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(req *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
+		return EchoOutput{Echo: req.Body.Message}, nil
 	})
 
 	inv := &ago.Invocation{
@@ -109,7 +107,7 @@ func TestToolHandleSuccess(t *testing.T) {
 }
 
 func TestToolHandleInvalidJSON(t *testing.T) {
-	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ context.Context, _ *ago.Invocation) (EchoOutput, error) {
+	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
 		return EchoOutput{}, nil
 	})
 
@@ -131,7 +129,7 @@ func TestToolHandleInvalidJSON(t *testing.T) {
 func TestToolHandleToolError(t *testing.T) {
 	customErr := ago.NewError[ago.NoDetails]("NOT_FOUND", "resource not found")
 
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("fail", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("fail", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, customErr
 	})
 
@@ -153,7 +151,7 @@ func TestToolHandleToolError(t *testing.T) {
 }
 
 func TestToolHandleNoInput(t *testing.T) {
-	tool := ago.NewTool[ago.NoInput, EchoOutput]("no-input", func(_ context.Context, _ *ago.Invocation) (EchoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, EchoOutput]("no-input", func(_ *ago.ToolRequest[ago.NoInput]) (EchoOutput, error) {
 		return EchoOutput{Echo: "no input needed"}, nil
 	})
 
@@ -183,7 +181,7 @@ func (v *ValidatedInput) Validate() error {
 }
 
 func TestToolHandleValidation(t *testing.T) {
-	tool := ago.NewTool[ValidatedInput, ago.NoOutput]("validated", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ValidatedInput, ago.NoOutput]("validated", func(_ *ago.ToolRequest[ValidatedInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, nil
 	})
 
@@ -210,5 +208,38 @@ func TestToolHandleValidation(t *testing.T) {
 	}
 	if !errors.Is(err, ago.ErrValidation) {
 		t.Errorf("expected ErrValidation, got %v", err)
+	}
+}
+
+func TestToolRequestFields(t *testing.T) {
+	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(req *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
+		// Verify all fields are populated.
+		if req.Context == nil {
+			t.Error("expected non-nil context")
+		}
+		if req.Identity == nil {
+			t.Error("expected non-nil identity")
+		}
+		if req.ToolName != "echo" {
+			t.Errorf("expected tool name 'echo', got %q", req.ToolName)
+		}
+		if req.Body.Message != "hello" {
+			t.Errorf("expected body message 'hello', got %q", req.Body.Message)
+		}
+		return EchoOutput{Echo: req.Body.Message}, nil
+	})
+
+	inv := &ago.Invocation{
+		Context:  context.Background(),
+		ID:       "test-id",
+		ToolName: "echo",
+		RawInput: []byte(`{"message":"hello"}`),
+		Identity: ago.NoIdentity{},
+		Metadata: map[string]any{"key": "value"},
+	}
+
+	_, err := tool.Handle(context.Background(), inv)
+	if err != nil {
+		t.Fatalf("Handle failed: %v", err)
 	}
 }

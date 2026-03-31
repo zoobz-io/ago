@@ -1,7 +1,6 @@
 package ago_test
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -21,7 +20,7 @@ type SearchOutput struct {
 }
 
 func TestGenerateSchema(t *testing.T) {
-	tool := ago.NewTool[SearchInput, SearchOutput]("search", func(_ context.Context, _ *ago.Invocation) (SearchOutput, error) {
+	tool := ago.NewTool[SearchInput, SearchOutput]("search", func(_ *ago.ToolRequest[SearchInput]) (SearchOutput, error) {
 		return SearchOutput{}, nil
 	}).WithDescription("Search for items")
 
@@ -83,7 +82,7 @@ func TestGenerateSchema(t *testing.T) {
 }
 
 func TestGenerateSchemaRequired(t *testing.T) {
-	tool := ago.NewTool[SearchInput, SearchOutput]("search", func(_ context.Context, _ *ago.Invocation) (SearchOutput, error) {
+	tool := ago.NewTool[SearchInput, SearchOutput]("search", func(_ *ago.ToolRequest[SearchInput]) (SearchOutput, error) {
 		return SearchOutput{}, nil
 	})
 
@@ -112,7 +111,7 @@ func TestGenerateSchemaRequired(t *testing.T) {
 }
 
 func TestGenerateSchemaNoInput(t *testing.T) {
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("noop", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("noop", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, nil
 	})
 
@@ -127,10 +126,10 @@ func TestGenerateSchemaNoInput(t *testing.T) {
 
 func TestGenerateSchemas(t *testing.T) {
 	r := ago.NewRegistry()
-	r.Register(ago.NewTool[ago.NoInput, ago.NoOutput]("tool1", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	r.Register(ago.NewTool[ago.NoInput, ago.NoOutput]("tool1", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, nil
 	}))
-	r.Register(ago.NewTool[EchoInput, EchoOutput]("tool2", func(_ context.Context, _ *ago.Invocation) (EchoOutput, error) {
+	r.Register(ago.NewTool[EchoInput, EchoOutput]("tool2", func(_ *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
 		return EchoOutput{}, nil
 	}))
 
@@ -141,7 +140,7 @@ func TestGenerateSchemas(t *testing.T) {
 }
 
 func TestSchemaJSON(t *testing.T) {
-	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ context.Context, _ *ago.Invocation) (EchoOutput, error) {
+	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
 		return EchoOutput{}, nil
 	}).WithDescription("Echo tool")
 
@@ -164,7 +163,7 @@ func TestSchemaJSON(t *testing.T) {
 }
 
 func TestSchemaAdditionalPropertiesFalse(t *testing.T) {
-	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ context.Context, _ *ago.Invocation) (EchoOutput, error) {
+	tool := ago.NewTool[EchoInput, EchoOutput]("echo", func(_ *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
 		return EchoOutput{}, nil
 	})
 
@@ -190,7 +189,7 @@ type CreateItemInput struct {
 }
 
 func TestGenerateSchemaNestedStruct(t *testing.T) {
-	tool := ago.NewTool[CreateItemInput, ago.NoOutput]("create_item", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[CreateItemInput, ago.NoOutput]("create_item", func(_ *ago.ToolRequest[CreateItemInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, nil
 	}).WithDescription("Create an item")
 

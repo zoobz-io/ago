@@ -11,9 +11,8 @@ import (
 )
 
 func newEchoTool() *ago.Tool[EchoInput, EchoOutput] {
-	return ago.NewTool[EchoInput, EchoOutput]("echo", func(_ context.Context, inv *ago.Invocation) (EchoOutput, error) {
-		input, _ := ago.TypedInput[EchoInput](inv)
-		return EchoOutput{Echo: input.Message}, nil
+	return ago.NewTool[EchoInput, EchoOutput]("echo", func(req *ago.ToolRequest[EchoInput]) (EchoOutput, error) {
+		return EchoOutput{Echo: req.Body.Message}, nil
 	}).WithDescription("Echo the input message")
 }
 
@@ -121,7 +120,7 @@ func TestRegistryPerToolMiddleware(t *testing.T) {
 }
 
 func TestRegistryPanicRecovery(t *testing.T) {
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("panicker", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("panicker", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		panic("something went wrong")
 	})
 
@@ -138,8 +137,8 @@ func TestRegistryPanicRecovery(t *testing.T) {
 }
 
 func TestRegistryNilIdentity(t *testing.T) {
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("check-identity", func(_ context.Context, inv *ago.Invocation) (ago.NoOutput, error) {
-		if inv.Identity == nil {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("check-identity", func(req *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
+		if req.Identity == nil {
 			panic("identity should never be nil")
 		}
 		return ago.NoOutput{}, nil
@@ -243,7 +242,7 @@ func TestRegistrySignalsOnFailure(t *testing.T) {
 		gotFailed = true
 	})
 
-	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("fail", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("fail", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
 		return ago.NoOutput{}, errors.New("handler error")
 	})
 
