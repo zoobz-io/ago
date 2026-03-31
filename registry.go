@@ -123,6 +123,17 @@ func (r *Registry) Invoke(ctx context.Context, toolName string, rawInput []byte,
 
 	duration := time.Since(start).Milliseconds()
 
+	// Check for undeclared tool errors.
+	if err == nil && result != nil && result.IsError() {
+		if !isErrorDeclared(tool, result.Error) {
+			r.emitWarn(ctx, ToolUndeclaredError,
+				ToolNameKey.Field(toolName),
+				ExecutionIDKey.Field(executionID),
+				ErrorKey.Field(fmt.Sprintf("undeclared error %s (add to WithErrors)", result.Error.Code())),
+			)
+		}
+	}
+
 	// Emit completion.
 	if err != nil {
 		r.emitError(ctx, ToolExecutionFailed,
@@ -181,6 +192,16 @@ func (r *Registry) Len() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.tools)
+}
+
+// isErrorDeclared checks if a tool error was declared via WithErrors.
+func isErrorDeclared(tool ToolDefinition, err ErrorDefinition) bool {
+	for _, d := range tool.ErrorDefs() {
+		if d.Code() == err.Code() {
+			return true
+		}
+	}
+	return false
 }
 
 // emitDebug dispatches a debug-level capitan signal.

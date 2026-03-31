@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/zoobz-io/ago"
+	"github.com/zoobz-io/capitan"
 )
 
 type EchoInput struct {
@@ -241,5 +242,43 @@ func TestToolRequestFields(t *testing.T) {
 	_, err := tool.Handle(context.Background(), inv)
 	if err != nil {
 		t.Fatalf("Handle failed: %v", err)
+	}
+}
+
+func TestToolUndeclaredErrorWarning(t *testing.T) {
+	declaredErr := ago.NewError[ago.NoDetails]("DECLARED", "declared error")
+	undeclaredErr := ago.NewError[ago.NoDetails]("UNDECLARED", "undeclared error")
+
+	c := capitan.New(capitan.WithSyncMode())
+	defer c.Shutdown()
+
+	var gotWarning bool
+	c.Hook(ago.ToolUndeclaredError, func(_ context.Context, _ *capitan.Event) {
+		gotWarning = true
+	})
+
+	// Tool only declares one error.
+	tool := ago.NewTool[ago.NoInput, ago.NoOutput]("test", func(_ *ago.ToolRequest[ago.NoInput]) (ago.NoOutput, error) {
+		return ago.NoOutput{}, undeclaredErr
+	}).WithErrors(declaredErr)
+
+	// Dispatch through registry so the capitan instance is used.
+	r := ago.NewRegistry().WithCapitan(c)
+	r.Register(tool)
+
+	result, err := r.Invoke(context.Background(), "test", nil, nil)
+	if err != nil {
+		t.Fatalf("expected tool error in result, not dispatch error: %v", err)
+	}
+	if !result.IsError() {
+		t.Fatal("expected error result")
+	}
+	if result.Error.Code() != "UNDECLARED" {
+		t.Errorf("expected UNDECLARED, got %q", result.Error.Code())
+	}
+
+	// Warning signal should have fired.
+	if !gotWarning {
+		t.Error("expected ToolUndeclaredError signal")
 	}
 }

@@ -3,6 +3,8 @@ package ago
 import (
 	"errors"
 	"fmt"
+
+	"github.com/zoobz-io/sentinel"
 )
 
 // ErrorDefinition is the interface for all ago error types.
@@ -12,22 +14,26 @@ type ErrorDefinition interface {
 	Code() string
 	Message() string
 	DetailsAny() any
+	DetailsMeta() sentinel.Metadata
 }
 
 // Error is a typed error with generic details, parallel to rocco.Error[D].
 // Immutable after construction — builder methods return new instances.
 type Error[D any] struct {
-	code    string
-	message string
-	details D
-	cause   error
+	code        string
+	message     string
+	details     D
+	cause       error
+	detailsMeta sentinel.Metadata
 }
 
-// NewError creates a typed error definition.
+// NewError creates a typed error definition. Scans D via sentinel at creation
+// for autodocs schema generation.
 func NewError[D any](code, message string) *Error[D] {
 	return &Error[D]{
-		code:    code,
-		message: message,
+		code:        code,
+		message:     message,
+		detailsMeta: sentinel.Scan[D](),
 	}
 }
 
@@ -45,6 +51,9 @@ func (e *Error[D]) Details() D { return e.details }
 
 // DetailsAny returns the error details as any.
 func (e *Error[D]) DetailsAny() any { return e.details }
+
+// DetailsMeta returns sentinel metadata for the details type.
+func (e *Error[D]) DetailsMeta() sentinel.Metadata { return e.detailsMeta }
 
 // Unwrap returns the underlying cause.
 func (e *Error[D]) Unwrap() error { return e.cause }

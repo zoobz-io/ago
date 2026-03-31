@@ -15,4 +15,9 @@ var (
 
 	// ToolExecutionFailed is emitted when a tool invocation fails.
 	ToolExecutionFailed = capitan.NewSignal("ago.tool.execution.failed", "Tool execution failed with error")
+
+	// ToolUndeclaredError is emitted when a handler returns an ErrorDefinition
+	// not registered via WithErrors. This is a programming error — the developer
+	// should declare all tool errors. The error is still returned to the LLM.
+	ToolUndeclaredError = capitan.NewSignal("ago.tool.error.undeclared", "Tool returned undeclared error")
 )

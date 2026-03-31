@@ -232,3 +232,66 @@ func TestGenerateSchemaNestedStruct(t *testing.T) {
 		t.Errorf("expected priority type 'integer', got %q", priProp.Type)
 	}
 }
+
+type ConstrainedInput struct {
+	Name   string `json:"name" validate:"min=3,max=50" desc:"User name"`
+	Age    int    `json:"age" validate:"gte=0,lte=150" desc:"User age"`
+	Email  string `json:"email" validate:"email" desc:"Email address"`
+	Role   string `json:"role" validate:"oneof=admin user guest" desc:"User role"`
+	Score  int    `json:"score" validate:"gt=0,lt=100" desc:"Score value"`
+	UserID string `json:"user_id" validate:"uuid" desc:"User UUID"`
+}
+
+func TestGenerateSchemaValidateConstraints(t *testing.T) {
+	tool := ago.NewTool[ConstrainedInput, ago.NoOutput]("constrained", func(_ *ago.ToolRequest[ConstrainedInput]) (ago.NoOutput, error) {
+		return ago.NoOutput{}, nil
+	})
+
+	schema := ago.GenerateSchema(tool)
+	props := schema.InputSchema.Properties
+
+	// String min/max → minLength/maxLength
+	nameProp := props["name"]
+	if nameProp.MinLength == nil || *nameProp.MinLength != 3 {
+		t.Error("expected name minLength=3")
+	}
+	if nameProp.MaxLength == nil || *nameProp.MaxLength != 50 {
+		t.Error("expected name maxLength=50")
+	}
+
+	// Numeric gte/lte → minimum/maximum
+	ageProp := props["age"]
+	if ageProp.Minimum == nil || *ageProp.Minimum != 0 {
+		t.Error("expected age minimum=0")
+	}
+	if ageProp.Maximum == nil || *ageProp.Maximum != 150 {
+		t.Error("expected age maximum=150")
+	}
+
+	// email → format
+	emailProp := props["email"]
+	if emailProp.Format != "email" {
+		t.Errorf("expected email format, got %q", emailProp.Format)
+	}
+
+	// oneof → enum
+	roleProp := props["role"]
+	if len(roleProp.Enum) != 3 {
+		t.Errorf("expected 3 enum values, got %d", len(roleProp.Enum))
+	}
+
+	// gt/lt → exclusiveMinimum/exclusiveMaximum
+	scoreProp := props["score"]
+	if scoreProp.ExclusiveMinimum == nil || *scoreProp.ExclusiveMinimum != 0 {
+		t.Error("expected score exclusiveMinimum=0")
+	}
+	if scoreProp.ExclusiveMaximum == nil || *scoreProp.ExclusiveMaximum != 100 {
+		t.Error("expected score exclusiveMaximum=100")
+	}
+
+	// uuid → format
+	userIDProp := props["user_id"]
+	if userIDProp.Format != "uuid" {
+		t.Errorf("expected uuid format, got %q", userIDProp.Format)
+	}
+}

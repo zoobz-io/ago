@@ -103,7 +103,7 @@ func (t *Tool[In, Out]) Handle(ctx context.Context, inv *Invocation) (*Result, e
 	// Call the typed handler.
 	output, err := t.fn(req)
 	if err != nil {
-		// If it's a declared tool error, return as Result (not dispatch error).
+		// If it's a tool error (ErrorDefinition), return as Result for the LLM.
 		var e ErrorDefinition
 		if errors.As(err, &e) {
 			return NewErrorResult(e), nil
@@ -146,6 +146,7 @@ func (t *Tool[In, Out]) WithErrors(errs ...ErrorDefinition) *Tool[In, Out] {
 	t.errorDefs = append(t.errorDefs, errs...)
 	return t
 }
+
 
 // Validatable is implemented by input types that can self-validate.
 type Validatable interface {
