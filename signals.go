@@ -2,37 +2,17 @@ package ago
 
 import "github.com/zoobz-io/capitan"
 
-// Flow lifecycle signals.
+// Tool lifecycle signals.
 var (
-	FlowCreated   = capitan.NewSignal("ago.flow.created", "Flow created")
-	FlowCompleted = capitan.NewSignal("ago.flow.completed", "Flow completed")
-	FlowFailed    = capitan.NewSignal("ago.flow.failed", "Flow failed")
-)
+	// ToolRegistered is emitted when a tool is added to a registry.
+	ToolRegistered = capitan.NewSignal("ago.tool.registered", "Tool registered with registry")
 
-// Saga lifecycle signals.
-var (
-	SagaStarted       = capitan.NewSignal("ago.saga.started", "Saga started")
-	SagaStepCompleted = capitan.NewSignal("ago.saga.step.completed", "Saga step completed")
-	SagaCompensating  = capitan.NewSignal("ago.saga.compensating", "Saga compensating")
-	SagaCompleted     = capitan.NewSignal("ago.saga.completed", "Saga completed")
-	SagaFailed        = capitan.NewSignal("ago.saga.failed", "Saga failed")
-)
+	// ToolExecutionStarted is emitted when a tool invocation is dispatched.
+	ToolExecutionStarted = capitan.NewSignal("ago.tool.execution.started", "Tool execution dispatched")
 
-// Request/response signals.
-var (
-	RequestSent      = capitan.NewSignal("ago.request.sent", "Request sent")
-	ResponseReceived = capitan.NewSignal("ago.response.received", "Response received")
-	RequestTimeout   = capitan.NewSignal("ago.request.timeout", "Request timed out")
-)
+	// ToolExecutionCompleted is emitted when a tool invocation succeeds.
+	ToolExecutionCompleted = capitan.NewSignal("ago.tool.execution.completed", "Tool execution completed successfully")
 
-// Dead letter signals.
-var (
-	DeadLetterRouted = capitan.NewSignal("ago.deadletter.routed", "Message routed to dead letter")
-)
-
-// Common keys for signal payloads.
-var (
-	StepNameKey   = capitan.NewStringKey("step_name")
-	SagaStatusKey = capitan.NewKey[SagaStatus]("saga_status", "ago.SagaStatus")
-	ErrorKey      = capitan.NewErrorKey("error")
+	// ToolExecutionFailed is emitted when a tool invocation fails.
+	ToolExecutionFailed = capitan.NewSignal("ago.tool.execution.failed", "Tool execution failed with error")
 )

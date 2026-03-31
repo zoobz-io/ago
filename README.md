@@ -9,316 +9,112 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/zoobz-io/ago)](go.mod)
 [![Release](https://img.shields.io/github/v/release/zoobz-io/ago)](https://github.com/zoobz-io/ago/releases)
 
-Event-driven orchestration primitives for Go.
+Typed LLM tool execution framework for Go. The same role [rocco](https://github.com/zoobz-io/rocco) plays for HTTP, ago plays for LLM tool dispatch.
 
-ago ("I do" in Latin) bridges [capitan](https://github.com/zoobz-io/capitan) events with [pipz](https://github.com/zoobz-io/pipz) pipelines, enabling distributed sagas, request/response patterns, and stateful coordination across processes.
+ago ("I do" in Latin) is where an LLM's decisions become validated, scoped, auditable actions in the host system. It sits alongside [cogito](https://github.com/zoobz-io/cogito) ("I think") and [zyn](https://github.com/zoobz-io/zyn) (typed LLM interactions) in the zoobzio AI stack.
 
-## Installation
+## Features
+
+- **Typed tool handlers** with generic input/output via `Tool[In, Out]`
+- **Automatic JSON Schema** generation from Go types via [sentinel](https://github.com/zoobz-io/sentinel)
+- **Input validation** with JSON deserialization and `Validatable` interface
+- **Middleware chain** for cross-cutting concerns (auth, logging, rate limiting)
+- **Typed errors** distinguishing tool errors (LLM can retry) from dispatch errors (system failure)
+- **Observability** via [capitan](https://github.com/zoobz-io/capitan) lifecycle signals
+- **Panic recovery** on every tool invocation
+
+## Install
 
 ```bash
 go get github.com/zoobz-io/ago
 ```
 
-Requirements: Go 1.24+
-
-## Core Concepts
-
-### Flow
-
-`Flow[T]` wraps a typed payload with correlation context and accumulated state:
+## Quick Start
 
 ```go
-// Create a flow from an event
-flow := ago.NewFromEvent(event, orderKey)
+// Define input and output types.
+type SearchInput struct {
+    Query string `json:"query" desc:"The search query"`
+    Limit int    `json:"limit" desc:"Max results to return"`
+}
 
-// Or create directly
-flow := ago.NewFlow(order, orderCreated)
-flow.CorrelationID = "order-123"
-```
+type SearchOutput struct {
+    Results []string `json:"results"`
+    Total   int      `json:"total"`
+}
 
-All primitives implement `pipz.Chainable[*Flow[T]]`, composable via pipz topologies.
-
-### Correlation
-
-Flows carry correlation and causation IDs for distributed tracing:
-
-```go
-pipeline := ago.Sequence("process-order",
-    ago.Correlate[Order]("correlate"),           // Generate correlation ID
-    ago.SagaStep(...).Build(),
-    ago.Emit[Order](...).Build(),
-)
-```
-
-## Primitives
-
-### Saga Orchestration
-
-Execute distributed transactions with automatic compensation on failure:
-
-```go
-// Define signals
-var (
-    reserveInventory   = capitan.NewSignal("inventory.reserve", "Reserve inventory")
-    releaseInventory   = capitan.NewSignal("inventory.release", "Release inventory")
-    chargePayment      = capitan.NewSignal("payment.charge", "Charge payment")
-    refundPayment      = capitan.NewSignal("payment.refund", "Refund payment")
-)
-
-// Build saga pipeline
-pipeline := ago.Sequence("order-saga",
-    ago.Correlate[Order]("correlate"),
-
-    ago.NewSagaStep[Order](
-        "reserve-inventory",
-        store,
-        orderKey,
-        reserveInventory,    // Execute signal
-        releaseInventory,    // Compensate signal
-    ).WithTimeout(5 * time.Minute).Build(),
-
-    ago.NewSagaStep[Order](
-        "charge-payment",
-        store,
-        orderKey,
-        chargePayment,
-        refundPayment,
-    ).Build(),
-)
-
-// On failure, trigger compensation
-compensate := ago.NewCompensate[Order]("compensate", store, orderKey).Build()
-```
-
-Sagas provide:
-- Compensation registered atomically *before* execution
-- LIFO rollback order
-- Idempotency via compensation records
-- Crash recovery via `RecoverSagas`
-- Configurable timeouts
-
-### Request/Response
-
-Synchronous request/response over async events:
-
-```go
-request := ago.NewRequest[Order, PaymentResult](
-    "charge-card",
-    chargeRequest,      // Request signal
-    chargeResponse,     // Response signal
-    orderKey,           // Request payload key
-    paymentResultKey,   // Response payload key
-).Timeout(30 * time.Second).Build()
-
-// Sends request, waits for correlated response
-flow, err := request.Process(ctx, flow)
-result, _ := ago.From(flow, paymentResultKey)
-```
-
-### Await
-
-Wait for a correlated event:
-
-```go
-await := ago.NewAwait[Order, ShippingStatus](
-    "await-shipment",
-    shippingUpdated,
-    shippingStatusKey,
-).Timeout(24 * time.Hour).Build()
-```
-
-### Emit
-
-Fire-and-forget event emission:
-
-```go
-emit := ago.NewEmit[Order](
-    "emit-created",
-    orderCreated,
-    orderKey,
-).Build()
-```
-
-### Enrichment
-
-Augment flows with external data:
-
-```go
-// Fails on error
-enrich := ago.Enrich[Order, Customer](
-    "fetch-customer",
-    customerKey,
-    func(ctx context.Context, order Order) (Customer, error) {
-        return customerService.Get(ctx, order.CustomerID)
+// Create a typed tool.
+search := ago.NewTool[SearchInput, SearchOutput]("search",
+    func(ctx context.Context, inv *ago.Invocation) (SearchOutput, error) {
+        input, _ := ago.TypedInput[SearchInput](inv)
+        results := doSearch(ctx, input.Query, input.Limit)
+        return SearchOutput{Results: results, Total: len(results)}, nil
     },
-)
+).WithDescription("Search for items by query")
 
-// Logs error but continues
-enrichOptional := ago.EnrichOptional[Order, Discount](
-    "fetch-discount",
-    discountKey,
-    fetchDiscount,
-)
+// Register and invoke.
+registry := ago.NewRegistry()
+registry.Register(search)
+
+result, err := registry.Invoke(ctx, "search", []byte(`{"query":"go","limit":10}`), identity)
 ```
 
-### Integration
+## Schema Generation
 
-Publish to message brokers:
+Generate tool schemas for LLM APIs directly from registered tools:
 
 ```go
-publish := ago.Publish[Order]("publish-order", kafkaProvider)
+schemas := ago.GenerateSchemas(registry)
+// schemas is []ToolSchema with name, description, and JSON Schema for each tool
 ```
 
-Route failures to dead letter queue:
+## Middleware
 
 ```go
-deadLetter := ago.NewDeadLetter[Order]("dlq", orderKey).
-    WithProvider(dlqProvider).
-    Build()
-```
-
-## Flow Control
-
-ago provides typed wrappers around pipz flow control:
-
-```go
-pipeline := ago.Sequence("order-pipeline",
-    // Retry with backoff
-    ago.Backoff("retry-payment", paymentStep, 3, time.Second),
-
-    // Circuit breaker
-    ago.CircuitBreaker("inventory-breaker", inventoryStep, 5, time.Minute),
-
-    // Rate limiting
-    ago.RateLimiter[Order]("rate-limit", 100, 10),
-
-    // Timeout
-    ago.Timeout("shipping-timeout", shippingStep, 30*time.Second),
-
-    // Fallback on failure
-    ago.Fallback("payment-fallback", primaryPayment, backupPayment),
-
-    // Parallel execution
-    ago.Concurrent("parallel-notify",
-        func(original *ago.Flow[Order], results map[pipz.Identity]*ago.Flow[Order], errors map[pipz.Identity]error) *ago.Flow[Order] {
-            return original
-        },
-        emailNotify,
-        smsNotify,
-        pushNotify,
-    ),
-)
-```
-
-## Storage
-
-ago requires a `Store` for saga state and coordination:
-
-```go
-// In-memory (testing)
-store := ago.NewMemoryStore()
-
-// PostgreSQL (production)
-store := ago.NewCerealStore(db)
-store.Migrate(ctx) // Create tables
-```
-
-## Recovery
-
-Handle crashed or timed-out sagas:
-
-```go
-// Run periodically
-recovered, err := ago.RecoverSagas(ctx, store, orderKey, capitan.Default())
-for _, state := range recovered {
-    log.Printf("Recovered saga %s", state.CorrelationID)
-}
-```
-
-## Example: Order Processing
-
-```go
-package main
-
-import (
-    "context"
-    "time"
-
-    "github.com/zoobz-io/ago"
-    "github.com/zoobz-io/capitan"
-    "github.com/zoobz-io/pipz"
-)
-
-type Order struct {
-    ID         string
-    CustomerID string
-    Total      float64
-}
-
-var (
-    // Signals
-    orderCreated     = capitan.NewSignal("order.created", "Order created")
-    inventoryReserve = capitan.NewSignal("inventory.reserve", "Reserve inventory")
-    inventoryRelease = capitan.NewSignal("inventory.release", "Release inventory")
-    paymentCharge    = capitan.NewSignal("payment.charge", "Charge payment")
-    paymentRefund    = capitan.NewSignal("payment.refund", "Refund payment")
-
-    // Keys
-    orderKey = capitan.NewKey[Order]("order", "app.Order")
-)
-
-func main() {
-    store := ago.NewMemoryStore()
-
-    // Build order processing pipeline
-    pipeline := ago.Sequence("process-order",
-        ago.Correlate[Order]("correlate"),
-
-        ago.NewSagaStep[Order]("reserve", store, orderKey,
-            inventoryReserve, inventoryRelease,
-        ).WithTimeout(5 * time.Minute).Build(),
-
-        ago.NewSagaStep[Order]("charge", store, orderKey,
-            paymentCharge, paymentRefund,
-        ).Build(),
-
-        ago.NewEmit[Order]("emit-created", orderCreated, orderKey).Build(),
-    )
-
-    // Process an order
-    flow := ago.NewFlow(Order{ID: "ORD-123", Total: 99.99}, orderCreated)
-    result, err := pipeline.Process(context.Background(), flow)
-    if err != nil {
-        // Trigger compensation
-        compensate := ago.NewCompensate[Order]("compensate", store, orderKey)
-        compensate.Process(context.Background(), flow)
+// Global middleware applies to all tools.
+registry.WithMiddleware(func(next ago.HandlerFunc) ago.HandlerFunc {
+    return func(ctx context.Context, inv *ago.Invocation) (*ago.Result, error) {
+        log.Printf("tool=%s id=%s", inv.ToolName, inv.ID)
+        return next(ctx, inv)
     }
+})
 
-    capitan.Shutdown()
+// Per-tool middleware.
+tool.WithMiddleware(rateLimitMiddleware, auditMiddleware)
+```
+
+## Error Handling
+
+Tool errors are returned to the LLM as structured results. Dispatch errors are system failures.
+
+```go
+// Define a tool error the LLM can act on.
+var ErrNotFound = ago.NewError[NotFoundDetails]("NOT_FOUND", "resource not found")
+
+// Return it from a handler — it becomes a tool_result, not a crash.
+func handler(ctx context.Context, inv *ago.Invocation) (Output, error) {
+    return Output{}, ErrNotFound.WithDetails(NotFoundDetails{Resource: "user"})
 }
 ```
 
-## Testing
+## Observability
 
-Run tests:
-```bash
-make test
-```
+All lifecycle events are emitted as [capitan](https://github.com/zoobz-io/capitan) signals:
 
-Run integration tests:
-```bash
-make test-integration
-```
+| Signal | When |
+|--------|------|
+| `ToolRegistered` | Tool added to registry |
+| `ToolExecutionStarted` | Invocation dispatched |
+| `ToolExecutionCompleted` | Invocation succeeded |
+| `ToolExecutionFailed` | Invocation failed |
 
-Run with coverage:
-```bash
-make coverage
-```
+## Dependencies
 
-## Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+| Package | Role |
+|---------|------|
+| [capitan](https://github.com/zoobz-io/capitan) | Lifecycle signal emission |
+| [sentinel](https://github.com/zoobz-io/sentinel) | Type metadata for schema generation |
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+[MIT](LICENSE)
