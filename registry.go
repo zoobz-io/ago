@@ -47,14 +47,16 @@ func (r *Registry) WithCapitan(c *capitan.Capitan) *Registry {
 // same name is already registered.
 func (r *Registry) Register(tool ToolDefinition) *Registry {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	name := tool.Spec().Name
 	if _, exists := r.tools[name]; exists {
+		r.mu.Unlock()
 		panic(fmt.Sprintf("ago: tool %q already registered", name))
 	}
 	r.tools[name] = tool
+	r.mu.Unlock()
 
+	// Signal emission outside lock — a hook on ToolRegistered that calls
+	// back into the registry (e.g., r.Tool()) would deadlock otherwise.
 	r.emitDebug(context.Background(), ToolRegistered,
 		ToolNameKey.Field(name),
 	)

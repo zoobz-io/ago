@@ -1,3 +1,5 @@
+//go:build testing
+
 // Package testing provides test utilities for ago consumers.
 package testing
 

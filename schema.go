@@ -135,8 +135,19 @@ func fieldToSchema(field sentinel.FieldMetadata, relIndex map[string]string) *JS
 		}
 		return &JSONSchema{Type: jsonTypeObject}
 	case sentinel.KindPointer:
-		// Treat pointers as their underlying type.
+		// Strip the * prefix and resolve the underlying type.
 		underlying := strings.TrimPrefix(field.Type, "*")
+		// Check if the underlying type is a struct via relationships.
+		if fqdn, ok := relIndex[field.Name]; ok {
+			if meta, ok := sentinel.Lookup(fqdn); ok {
+				return metadataToSchema(meta)
+			}
+		}
+		// Try direct lookup for struct types.
+		if meta, ok := sentinel.Lookup(underlying); ok {
+			return metadataToSchema(meta)
+		}
+		// Fall back to scalar mapping.
 		return &JSONSchema{Type: scalarToJSONType(underlying)}
 	case sentinel.KindMap:
 		return &JSONSchema{Type: jsonTypeObject}
@@ -171,15 +182,21 @@ func applyValidateConstraints(schema *JSONSchema, validateTag, goType string) {
 
 		switch tag {
 		case "min":
-			if isNumeric {
+			switch {
+			case isArray:
+				schema.MinItems = parseInt(param)
+			case isNumeric:
 				schema.Minimum = parseFloat(param)
-			} else if isString {
+			case isString:
 				schema.MinLength = parseInt(param)
 			}
 		case "max":
-			if isNumeric {
+			switch {
+			case isArray:
+				schema.MaxItems = parseInt(param)
+			case isNumeric:
 				schema.Maximum = parseFloat(param)
-			} else if isString {
+			case isString:
 				schema.MaxLength = parseInt(param)
 			}
 		case "len":
