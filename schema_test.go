@@ -177,3 +177,59 @@ func TestSchemaAdditionalPropertiesFalse(t *testing.T) {
 		t.Error("expected additionalProperties to be false")
 	}
 }
+
+// Nested struct types for testing recursive schema generation.
+type ItemDetail struct {
+	Category string `json:"category" desc:"Category name"`
+	Priority int    `json:"priority" desc:"Priority level"`
+}
+
+type CreateItemInput struct {
+	Name    string     `json:"name" desc:"Item name"`
+	Details ItemDetail `json:"details" desc:"Item details"`
+}
+
+func TestGenerateSchemaNestedStruct(t *testing.T) {
+	tool := ago.NewTool[CreateItemInput, ago.NoOutput]("create_item", func(_ context.Context, _ *ago.Invocation) (ago.NoOutput, error) {
+		return ago.NoOutput{}, nil
+	}).WithDescription("Create an item")
+
+	schema := ago.GenerateSchema(tool)
+
+	props := schema.InputSchema.Properties
+	if props == nil {
+		t.Fatal("expected properties")
+	}
+
+	detailsProp, ok := props["details"]
+	if !ok {
+		t.Fatal("expected 'details' property")
+	}
+	if detailsProp.Type != "object" {
+		t.Errorf("expected details type 'object', got %q", detailsProp.Type)
+	}
+
+	// The nested struct should have its own properties resolved.
+	if detailsProp.Properties == nil {
+		t.Fatal("expected nested properties on 'details' — sentinel.Scan should cache related types")
+	}
+
+	catProp, ok := detailsProp.Properties["category"]
+	if !ok {
+		t.Fatal("expected 'category' property in details")
+	}
+	if catProp.Type != "string" {
+		t.Errorf("expected category type 'string', got %q", catProp.Type)
+	}
+	if catProp.Description != "Category name" {
+		t.Errorf("expected category description, got %q", catProp.Description)
+	}
+
+	priProp, ok := detailsProp.Properties["priority"]
+	if !ok {
+		t.Fatal("expected 'priority' property in details")
+	}
+	if priProp.Type != "integer" {
+		t.Errorf("expected priority type 'integer', got %q", priProp.Type)
+	}
+}

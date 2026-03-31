@@ -55,8 +55,8 @@ type Tool[In, Out any] struct {
 // The handler function receives context and the full Invocation. Use
 // TypedInput[In](inv) to extract the deserialized, typed input.
 func NewTool[In, Out any](name string, fn func(context.Context, *Invocation) (Out, error)) *Tool[In, Out] {
-	inMeta := sentinel.Inspect[In]()
-	outMeta := sentinel.Inspect[Out]()
+	inMeta := sentinel.Scan[In]()
+	outMeta := sentinel.Scan[Out]()
 
 	return &Tool[In, Out]{
 		fn: fn,

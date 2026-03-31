@@ -52,6 +52,12 @@ func metadataToSchema(meta sentinel.Metadata) *JSONSchema {
 		return &JSONSchema{Type: jsonTypeObject}
 	}
 
+	// Build a relationship index: field name -> target FQDN.
+	relIndex := make(map[string]string, len(meta.Relationships))
+	for _, rel := range meta.Relationships {
+		relIndex[rel.Field] = rel.To
+	}
+
 	schema := &JSONSchema{
 		Type:       jsonTypeObject,
 		Properties: make(map[string]*JSONSchema),
@@ -63,7 +69,7 @@ func metadataToSchema(meta sentinel.Metadata) *JSONSchema {
 			continue
 		}
 
-		prop := fieldToSchema(field)
+		prop := fieldToSchema(field, relIndex)
 
 		// Use desc tag for schema description.
 		if desc, ok := field.Tags["desc"]; ok && desc != "" {
@@ -86,22 +92,26 @@ func metadataToSchema(meta sentinel.Metadata) *JSONSchema {
 }
 
 // fieldToSchema maps a sentinel.FieldMetadata to a JSONSchema.
-func fieldToSchema(field sentinel.FieldMetadata) *JSONSchema {
+// relIndex maps field names to their target FQDNs from parent relationships.
+func fieldToSchema(field sentinel.FieldMetadata, relIndex map[string]string) *JSONSchema {
 	switch field.Kind {
 	case sentinel.KindScalar:
 		return &JSONSchema{Type: scalarToJSONType(field.Type)}
 	case sentinel.KindSlice:
 		return &JSONSchema{
 			Type:  jsonTypeArray,
-			Items: sliceElementSchema(field),
+			Items: sliceElementSchema(field, relIndex),
 		}
 	case sentinel.KindStruct:
-		// Look up in sentinel cache for recursive resolution.
-		fqdn := structFQDN(field)
-		if fqdn != "" {
+		// Use relationship FQDN for accurate cache lookup.
+		if fqdn, ok := relIndex[field.Name]; ok {
 			if meta, ok := sentinel.Lookup(fqdn); ok {
 				return metadataToSchema(meta)
 			}
+		}
+		// Fallback: try field.Type directly (works when it's already a FQDN).
+		if meta, ok := sentinel.Lookup(field.Type); ok {
+			return metadataToSchema(meta)
 		}
 		return &JSONSchema{Type: jsonTypeObject}
 	case sentinel.KindPointer:
@@ -163,7 +173,7 @@ func hasOmitempty(field sentinel.FieldMetadata) bool {
 }
 
 // sliceElementSchema tries to determine the element type of a slice.
-func sliceElementSchema(field sentinel.FieldMetadata) *JSONSchema {
+func sliceElementSchema(field sentinel.FieldMetadata, relIndex map[string]string) *JSONSchema {
 	// field.Type is like "[]string" or "[]Order".
 	elemType := strings.TrimPrefix(field.Type, "[]")
 	if elemType == "" {
@@ -176,17 +186,17 @@ func sliceElementSchema(field sentinel.FieldMetadata) *JSONSchema {
 		return &JSONSchema{Type: jsonType}
 	}
 
-	// Might be a struct — check sentinel cache.
+	// Use relationship FQDN if available.
+	if fqdn, ok := relIndex[field.Name]; ok {
+		if meta, ok := sentinel.Lookup(fqdn); ok {
+			return metadataToSchema(meta)
+		}
+	}
+
+	// Fallback: try element type directly.
 	if meta, ok := sentinel.Lookup(elemType); ok {
 		return metadataToSchema(meta)
 	}
 
 	return &JSONSchema{Type: jsonTypeString}
-}
-
-// structFQDN attempts to resolve the FQDN for a struct field type.
-func structFQDN(field sentinel.FieldMetadata) string {
-	// Check relationships on the parent type for the FQDN.
-	// For now, try direct lookup by type name.
-	return field.Type
 }
